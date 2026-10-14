@@ -1,809 +1,1495 @@
 <!DOCTYPE html>
-<html lang="zh-TW" class="dark">
+<html lang="zh-TW">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>50 Startups 多元線性迴歸分析平台</title>
-  <!-- Tailwind CSS CDN -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          colors: {
-            brand: {
-              50: '#eef2ff',
-              500: '#6366f1',
-              600: '#4f46e5',
-              700: '#4338ca',
-            }
-          }
-        }
-      }
-    }
-  </script>
-  <!-- PapaParse CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <title>50 Startups: 多元線性迴歸與特徵選擇分析儀表板</title>
+  
+  <!-- Google Fonts: Outfit & Inter -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@500;600;700;800&family=Fira+Code:wght@400;500&display=swap" rel="stylesheet">
+  
+  <!-- FontAwesome Icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+  
   <!-- Chart.js CDN -->
   <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
-  <!-- math.js CDN -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
-  <!-- Lucide Icons CDN -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Model Data JS -->
+  <script src="model_data.js"></script>
+
   <style>
-    /* 自訂平滑滑桿樣式 */
-    input[type=range]::-webkit-slider-thumb {
-      -webkit-appearance: none;
-      height: 20px;
-      width: 20px;
+    :root {
+      --primary-dark: #343090;
+      --primary: #4f46e5;
+      --primary-light: #6366f1;
+      --primary-subtle: #eef2ff;
+      --accent-blue: #3b82f6;
+      --accent-emerald: #10b981;
+      --accent-emerald-subtle: #ecfdf5;
+      --accent-amber: #f59e0b;
+      --accent-amber-subtle: #fffbeb;
+      --accent-rose: #f43f5e;
+      --accent-rose-subtle: #fff1f2;
+      --slate-50: #f8fafc;
+      --slate-100: #f1f5f9;
+      --slate-200: #e2e8f0;
+      --slate-300: #cbd5e1;
+      --slate-400: #94a3b8;
+      --slate-500: #64748b;
+      --slate-600: #475569;
+      --slate-700: #334155;
+      --slate-800: #1e293b;
+      --slate-900: #0f172a;
+      --radius-sm: 8px;
+      --radius-md: 12px;
+      --radius-lg: 16px;
+      --radius-xl: 20px;
+      --shadow-sm: 0 1px 3px 0 rgba(0, 0, 0, 0.05);
+      --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -2px rgba(0, 0, 0, 0.05);
+      --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.08), 0 4px 6px -4px rgba(0, 0, 0, 0.04);
+      --shadow-glow: 0 0 20px rgba(79, 70, 229, 0.15);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: var(--slate-50);
+      color: var(--slate-800);
+      line-height: 1.5;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    h1, h2, h3, h4, .font-heading {
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      color: var(--slate-900);
+    }
+
+    .container {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 24px 20px 60px;
+    }
+
+    /* Top Breadcrumb & Header */
+    .top-header {
+      background: white;
+      border-bottom: 1px solid var(--slate-200);
+      padding: 16px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
+    }
+
+    .header-inner {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .breadcrumbs {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--slate-500);
+      margin-bottom: 4px;
+    }
+
+    .breadcrumbs a {
+      color: var(--slate-500);
+      text-decoration: none;
+      transition: color 0.15s;
+    }
+
+    .breadcrumbs a:hover {
+      color: var(--primary);
+    }
+
+    .header-title-group h1 {
+      font-size: 24px;
+      letter-spacing: -0.02em;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .brand-badge {
+      background: linear-gradient(135deg, var(--primary-dark), var(--primary));
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      padding: 3px 9px;
       border-radius: 9999px;
-      background: #6366f1;
+      letter-spacing: 0.04em;
+      text-transform: uppercase;
+    }
+
+    .problem-switcher {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .problem-select {
+      background: var(--slate-100);
+      border: 1px solid var(--slate-300);
+      color: var(--slate-800);
+      padding: 8px 14px;
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      font-weight: 600;
       cursor: pointer;
-      box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
-      transition: all 0.15s ease-in-out;
+      outline: none;
+      transition: all 0.2s;
     }
-    input[type=range]::-webkit-slider-thumb:hover {
-      transform: scale(1.15);
-      background: #818cf8;
+
+    .problem-select:focus {
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
     }
-    .glass-card {
-      background: rgba(30, 41, 59, 0.7);
-      backdrop-filter: blur(12px);
-      border: 1px solid rgba(255, 255, 255, 0.08);
+
+    /* Hero Banner */
+    .hero-card {
+      background: linear-gradient(135deg, #1e1b4b 0%, #312e81 40%, #3730a3 100%);
+      color: white;
+      border-radius: var(--radius-xl);
+      padding: 36px 40px;
+      margin-bottom: 28px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .hero-card::after {
+      content: '';
+      position: absolute;
+      top: -60px;
+      right: -60px;
+      width: 320px;
+      height: 320px;
+      background: radial-gradient(circle, rgba(99, 102, 241, 0.25) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .hero-card h2 {
+      font-size: 30px;
+      color: white;
+      margin-bottom: 12px;
+      line-height: 1.25;
+    }
+
+    .hero-card p {
+      font-size: 15px;
+      color: #c7d2fe;
+      max-width: 860px;
+      line-height: 1.6;
+    }
+
+    .hero-tags {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 20px;
+    }
+
+    .hero-pill {
+      background: rgba(255, 255, 255, 0.12);
+      backdrop-filter: blur(8px);
+      border: 1px solid rgba(255, 255, 255, 0.18);
+      color: #e0e7ff;
+      font-size: 12px;
+      font-weight: 500;
+      padding: 5px 12px;
+      border-radius: 9999px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    /* Cards */
+    .card {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--slate-200);
+      box-shadow: var(--shadow-sm);
+      padding: 24px;
+      transition: box-shadow 0.2s, border-color 0.2s;
+    }
+
+    .card:hover {
+      box-shadow: var(--shadow-md);
+      border-color: #cbd5e1;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .card-title-group h3 {
+      font-size: 18px;
+      color: var(--slate-900);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-subtitle {
+      font-size: 13px;
+      color: var(--slate-500);
+      margin-top: 2px;
+    }
+
+    /* Controls Bar */
+    .controls-wrapper {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--slate-200);
+      box-shadow: var(--shadow-sm);
+      padding: 20px 24px;
+      margin-bottom: 24px;
+    }
+
+    .control-label {
+      font-size: 11px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--slate-400);
+      margin-bottom: 10px;
+      display: block;
+    }
+
+    .tabs-pills {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+
+    .tab-btn {
+      padding: 10px 18px;
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      font-size: 13.5px;
+      font-weight: 600;
+      color: var(--slate-700);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .tab-btn:hover {
+      background: var(--primary-subtle);
+      border-color: var(--primary-light);
+      color: var(--primary);
+    }
+
+    .tab-btn.active {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+      color: white;
+      box-shadow: 0 4px 10px rgba(52, 48, 144, 0.25);
+    }
+
+    .tab-btn .badge-pill {
+      font-size: 10px;
+      padding: 2px 7px;
+      border-radius: 9999px;
+      background: rgba(0, 0, 0, 0.06);
+    }
+
+    .tab-btn.active .badge-pill {
+      background: rgba(255, 255, 255, 0.25);
+      color: white;
+    }
+
+    /* Feature Count Step Buttons */
+    .k-selector-group {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .k-btn {
+      padding: 9px 16px;
+      border: 1px solid var(--slate-200);
+      background: white;
+      border-radius: var(--radius-md);
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate-700);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+
+    .k-btn:hover {
+      border-color: var(--primary);
+      color: var(--primary);
+    }
+
+    .k-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: white;
+      box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
+    }
+
+    .k-btn.sweet-spot {
+      border-color: var(--accent-emerald);
+      background: var(--accent-emerald-subtle);
+      color: #065f46;
+    }
+
+    .k-btn.sweet-spot.active {
+      background: #059669;
+      border-color: #059669;
+      color: white;
+      box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
+    }
+
+    .k-btn.overfitting {
+      border-color: var(--accent-amber);
+    }
+
+    .k-btn.overfitting.active {
+      background: #d97706;
+      border-color: #d97706;
+      color: white;
+    }
+
+    /* Metrics Grid */
+    .metrics-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(210px, 1fr));
+      gap: 16px;
+      margin-bottom: 24px;
+    }
+
+    .metric-card {
+      background: white;
+      border-radius: var(--radius-lg);
+      border: 1px solid var(--slate-200);
+      padding: 20px;
+      position: relative;
+      overflow: hidden;
+      box-shadow: var(--shadow-sm);
+      transition: all 0.2s;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-md);
+    }
+
+    .metric-card::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: var(--primary);
+    }
+
+    .metric-card.sweet::before {
+      background: var(--accent-emerald);
+    }
+
+    .metric-card.alert::before {
+      background: var(--accent-amber);
+    }
+
+    .metric-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--slate-500);
+      text-transform: uppercase;
+      letter-spacing: 0.04em;
+      margin-bottom: 8px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .metric-val {
+      font-size: 26px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 700;
+      color: var(--slate-900);
+      line-height: 1.1;
+      margin-bottom: 6px;
+    }
+
+    .metric-note {
+      font-size: 12px;
+      color: var(--slate-500);
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-tag {
+      font-size: 11px;
+      font-weight: 600;
+      padding: 3px 8px;
+      border-radius: 6px;
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .badge-green {
+      background: var(--accent-emerald-subtle);
+      color: #065f46;
+    }
+
+    .badge-blue {
+      background: var(--primary-subtle);
+      color: var(--primary-dark);
+    }
+
+    .badge-amber {
+      background: var(--accent-amber-subtle);
+      color: #92400e;
+    }
+
+    .feature-chip {
+      background: var(--slate-100);
+      border: 1px solid var(--slate-200);
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--slate-700);
+    }
+
+    /* Dual Charts Grid */
+    .dual-charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 24px;
+      margin-bottom: 24px;
+    }
+
+    .chart-container {
+      position: relative;
+      height: 340px;
+      width: 100%;
+    }
+
+    /* Mathematical Equation Card */
+    .equation-card {
+      background: #0f172a;
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 22px 28px;
+      margin-bottom: 24px;
+      box-shadow: var(--shadow-md);
+      border-left: 5px solid var(--primary-light);
+    }
+
+    .equation-title {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      color: #94a3b8;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .equation-formula {
+      font-family: 'Fira Code', monospace;
+      font-size: 17px;
+      color: #a5b4fc;
+      overflow-x: auto;
+      white-space: nowrap;
+      padding-bottom: 4px;
+    }
+
+    /* Calculator & Table Grid */
+    .calc-grid {
+      display: grid;
+      grid-template-columns: 1.4fr 1fr;
+      gap: 24px;
+    }
+
+    @media (max-width: 900px) {
+      .calc-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* Tables */
+    .table-responsive {
+      overflow-x: auto;
+    }
+
+    .data-table {
+      width: 100%;
+      border-collapse: collapse;
+      text-align: left;
+      font-size: 13px;
+    }
+
+    .data-table th {
+      background: var(--slate-50);
+      color: var(--slate-600);
+      font-weight: 600;
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--slate-200);
+      white-space: nowrap;
+    }
+
+    .data-table td {
+      padding: 12px 14px;
+      border-bottom: 1px solid var(--slate-100);
+      color: var(--slate-700);
+      white-space: nowrap;
+    }
+
+    .data-table tr:hover td {
+      background: var(--slate-50);
+    }
+
+    /* Inputs */
+    .input-group {
+      margin-bottom: 16px;
+    }
+
+    .input-label-row {
+      display: flex;
+      justify-content: space-between;
+      margin-bottom: 6px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--slate-700);
+    }
+
+    .input-field {
+      width: 100%;
+      padding: 10px 14px;
+      border: 1px solid var(--slate-300);
+      border-radius: var(--radius-md);
+      font-size: 14px;
+      font-family: inherit;
+      color: var(--slate-900);
+      transition: all 0.15s;
+    }
+
+    .input-field:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.15);
+    }
+
+    .range-slider {
+      width: 100%;
+      margin-top: 6px;
+      accent-color: var(--primary);
+    }
+
+    .prediction-output-box {
+      background: linear-gradient(135deg, #312e81 0%, #1e1b4b 100%);
+      color: white;
+      border-radius: var(--radius-lg);
+      padding: 26px;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      box-shadow: var(--shadow-md);
+      position: relative;
+      overflow: hidden;
+      margin-top: 14px;
+    }
+
+    .prediction-output-box::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 160px;
+      height: 160px;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.3) 0%, transparent 70%);
+      pointer-events: none;
+    }
+
+    .pred-label {
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #c7d2fe;
+      margin-bottom: 8px;
+    }
+
+    .pred-value {
+      font-size: 36px;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      color: #34d399;
+      margin-bottom: 10px;
+      letter-spacing: -0.02em;
+    }
+
+    .pred-formula-note {
+      font-size: 12px;
+      color: #a5b4fc;
+      line-height: 1.5;
+    }
+
+    .status-dot {
+      display: inline-block;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      margin-right: 6px;
+    }
+    .dot-green { background: var(--accent-emerald); }
+    .dot-amber { background: var(--accent-amber); }
+    .dot-red { background: var(--accent-rose); }
+
+    /* Problem 2 佔位區塊 */
+    .placeholder-box {
+      background: white;
+      border-radius: var(--radius-xl);
+      border: 1px solid var(--slate-200);
+      padding: 60px 30px;
+      text-align: center;
+      box-shadow: var(--shadow-sm);
+    }
+
+    /* Footer */
+    footer {
+      margin-top: 50px;
+      background: white;
+      border-top: 1px solid var(--slate-200);
+      padding: 36px 0;
+      color: var(--slate-600);
+      font-size: 13.5px;
+    }
+
+    .footer-inner {
+      max-width: 1380px;
+      margin: 0 auto;
+      padding: 0 20px;
+      display: flex;
+      justify-content: space-between;
+      flex-wrap: wrap;
+      gap: 24px;
+    }
+
+    .ack-card {
+      background: var(--slate-50);
+      border: 1px solid var(--slate-200);
+      border-radius: var(--radius-md);
+      padding: 16px 20px;
+      margin-top: 16px;
+      line-height: 1.6;
+    }
+
+    .ack-card a {
+      color: var(--primary);
+      text-decoration: underline;
+      font-weight: 500;
+    }
+
+    @media (max-width: 768px) {
+      .dual-charts-grid {
+        grid-template-columns: 1fr;
+      }
+      .hero-card {
+        padding: 24px;
+      }
+      .hero-card h2 {
+        font-size: 24px;
+      }
     }
   </style>
 </head>
-<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+<body>
 
   <!-- 頂部導航列 -->
-  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
-    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
-      <div class="flex items-center space-x-3">
-        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
-          <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+  <header class="top-header">
+    <div class="header-inner">
+      <div>
+        <div class="breadcrumbs">
+          <a href="#"><i class="fa-solid fa-house"></i> 首頁</a>
+          <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+          <a href="#">迴歸分析</a>
+          <i class="fa-solid fa-chevron-right" style="font-size: 10px;"></i>
+          <span style="color: var(--slate-800); font-weight: 600;">50 Startups 特徵演進分析</span>
         </div>
-        <div>
-          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
-            ML Analytics Studio
-            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">CRISP-DM</span>
+        <div class="header-title-group">
+          <h1>
+            <i class="fa-solid fa-chart-line" style="color: var(--primary);"></i>
+            50 Startups 多元線性迴歸探索平台
+            <span class="brand-badge">CRISP-DM</span>
           </h1>
-          <p class="text-xs text-slate-400 hidden sm:block">純前端多元線性迴歸計算引擎 (Normal Equation)</p>
         </div>
       </div>
-
-      <!-- 加分條件 1: 主題/問題切換下拉式選單 -->
-      <div class="flex items-center gap-2">
-        <label for="problemSelect" class="text-xs text-slate-400 hidden md:inline-block font-medium">選擇任務：</label>
-        <div class="relative">
-          <select id="problemSelect" class="appearance-none bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg pl-3 pr-9 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer transition font-medium hover:bg-slate-750">
-            <option value="problem1" selected>Problem 1: 50 Startups 多元線性迴歸</option>
-            <option value="problem2">Problem 2: 直接套用 Skill or Workflow</option>
-          </select>
-          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
-            <i data-lucide="chevron-down" class="w-4 h-4"></i>
-          </div>
-        </div>
+      <div class="problem-switcher">
+        <label for="problemSelect" style="font-size: 12px; font-weight: 600; color: var(--slate-500);">任務切換：</label>
+        <select id="problemSelect" class="problem-select">
+          <option value="problem1" selected>Problem 1: 50 Startups 多元線性迴歸</option>
+          <option value="problem2">Problem 2: 直接套用 Skill or Workflow</option>
+        </select>
       </div>
     </div>
   </header>
 
-  <!-- 主要內容區 -->
-  <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+  <div class="container">
 
-    <!-- 加分條件 2: 自訂資料集輸入區域 (頂部) -->
-    <section class="glass-card rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
-      <div class="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
-      
-      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
-        <div class="space-y-1">
-          <div class="flex items-center gap-2 text-sm font-semibold text-slate-200">
-            <i data-lucide="database" class="w-4 h-4 text-indigo-400"></i>
-            動態資料集設定 (CSV URL)
-          </div>
-          <p class="text-xs text-slate-400">支援即時抓取遠端或本地 CSV 檔案，使用 PapaParse 進行流式解析與訓練。</p>
+    <!-- Problem 1 容器 -->
+    <div id="problem1Content">
+
+      <!-- Hero Card Banner -->
+      <div class="hero-card">
+        <h2>特徵選擇與精簡度分析 (Parsimony Analysis)</h2>
+        <p>
+          評估 5 種機器學習特徵選擇演算法（<strong>Lasso</strong>、<strong>前向逐步選擇 Forward SFS</strong>、<strong>遞迴特徵消除 RFE</strong>、<strong>彈性網路 ElasticNet</strong>、<strong>全子集窮舉搜尋 Exhaustive Search</strong>）相對於基準 OLS 的表現。探索特徵數量 $k=1 \dots 5$ 下的偏差與變異權衡，精準鎖定 <strong>$k=2$ 最佳黃金平衡點 (Sweet Spot)</strong> 與 <strong>$k=5$ 過度擬合懸崖</strong>。
+        </p>
+        <div class="hero-tags">
+          <span class="hero-pill"><i class="fa-solid fa-database"></i> 50 Startups 資料集</span>
+          <span class="hero-pill"><i class="fa-solid fa-bolt"></i> 5 種特徵篩選法</span>
+          <span class="hero-pill"><i class="fa-solid fa-star" style="color: #34d399;"></i> 全局最佳解: k=2 (RMSE $8,198.80)</span>
+          <span class="hero-pill"><i class="fa-solid fa-triangle-exclamation" style="color: #fbbf24;"></i> 過度擬合警示: k=5 (RMSE $9,137.99)</span>
+        </div>
+      </div>
+
+      <!-- 控制面板 -->
+      <div class="controls-wrapper">
+        <span class="control-label"><i class="fa-solid fa-sliders"></i> 1. 選擇特徵篩選演算法 (Algorithm)</span>
+        <div class="tabs-pills" id="algoTabs">
+          <button class="tab-btn active" data-algo="Lasso">
+            <i class="fa-solid fa-filter"></i> Lasso (L1 懲罰排序)
+            <span class="badge-pill">基準推薦</span>
+          </button>
+          <button class="tab-btn" data-algo="Forward SFS">
+            <i class="fa-solid fa-arrow-trend-up"></i> 前向選擇 (Forward SFS)
+            <span class="badge-pill">貪婪搜尋</span>
+          </button>
+          <button class="tab-btn" data-algo="RFE">
+            <i class="fa-solid fa-scissors"></i> 遞迴特徵消除 (RFE)
+            <span class="badge-pill">後向淘汰</span>
+          </button>
+          <button class="tab-btn" data-algo="ElasticNet">
+            <i class="fa-solid fa-diagram-project"></i> 彈性網路 (ElasticNet)
+            <span class="badge-pill">L1 + L2</span>
+          </button>
+          <button class="tab-btn" data-algo="Exhaustive">
+            <i class="fa-solid fa-magnifying-glass-chart"></i> 窮舉搜尋 (Exhaustive)
+            <span class="badge-pill">最佳子集</span>
+          </button>
+          <button class="tab-btn" data-algo="ALL" style="border-left: 2px solid var(--primary);">
+            <i class="fa-solid fa-layer-group"></i> 🌟 同步比較全部 5 種方法
+          </button>
         </div>
 
-        <div class="flex-1 max-w-2xl flex flex-col sm:flex-row gap-2">
-          <div class="relative flex-1">
-            <input 
-              type="text" 
-              id="csvUrlInput" 
-              value="https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv" 
-              placeholder="請輸入 CSV 檔案網址..."
-              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono truncate"
-            />
+        <span class="control-label" style="margin-top: 12px;"><i class="fa-solid fa-list-ol"></i> 2. 特徵數量選擇 (k = 1 至 5)</span>
+        <div class="k-selector-group" id="kSelectorGroup">
+          <button class="k-btn" data-k="1">k = 1 <span style="font-weight: 400; font-size: 11px;">(研發支出 R&D Spend)</span></button>
+          <button class="k-btn sweet-spot active" data-k="2">k = 2 ★ 最佳黃金點 <span style="font-size: 11px; font-weight: 700;">(最小 RMSE)</span></button>
+          <button class="k-btn" data-k="3">k = 3 <span style="font-size: 11px;">(+ 州別 / 行政管理)</span></button>
+          <button class="k-btn" data-k="4">k = 4 <span style="font-size: 11px;">(4 個預測變數)</span></button>
+          <button class="k-btn overfitting" data-k="5">k = 5 ⚠ 完整全模型 <span style="font-size: 11px; font-weight: 700;">(過度擬合陡升)</span></button>
+        </div>
+      </div>
+
+      <!-- 評估指標卡片 -->
+      <div class="metrics-grid" id="metricsGrid">
+        <div class="metric-card sweet">
+          <div class="metric-title">
+            <span>測試集 RMSE</span>
+            <span class="badge-tag badge-green" id="rmseBadge"><i class="fa-solid fa-award"></i> 最佳表現</span>
           </div>
-          <div class="flex items-center gap-2">
-            <button 
-              id="loadDataBtn" 
-              class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-medium text-xs sm:text-sm rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 whitespace-nowrap">
-              <i data-lucide="refresh-cw" class="w-4 h-4" id="btnIcon"></i>
-              <span id="btnText">載入資料</span>
-            </button>
-            <button 
-              id="useLocalBtn"
-              title="載入本地 50_Startups.csv"
-              class="px-3 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 text-xs sm:text-sm rounded-xl transition whitespace-nowrap">
-              本地 CSV
-            </button>
+          <div class="metric-val" id="valRMSE">$8,198.80</div>
+          <div class="metric-note">
+            <span>數值越低越佳 (所有特徵數中表現最優)</span>
+          </div>
+        </div>
+
+        <div class="metric-card sweet">
+          <div class="metric-title">
+            <span>決定係數 R²</span>
+            <span class="badge-tag badge-blue"><i class="fa-solid fa-circle-check"></i> 94.7% 擬合</span>
+          </div>
+          <div class="metric-val" id="valR2">0.9474</div>
+          <div class="metric-note">
+            <span>模型解釋利潤 94.74% 的變異量</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-title">
+            <span>調整後 R² (Adj. R²)</span>
+            <i class="fa-solid fa-scale-balanced" style="color: var(--slate-400);"></i>
+          </div>
+          <div class="metric-val" id="valAdjR2">0.9324</div>
+          <div class="metric-note">
+            <span>懲罰多餘與冗餘參數之指標</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-title">
+            <span>平均絕對誤差 (MAE)</span>
+            <i class="fa-solid fa-calculator" style="color: var(--slate-400);"></i>
+          </div>
+          <div class="metric-val" id="valMAE">$6,488.75</div>
+          <div class="metric-note">
+            <span>測試集平均預測誤差金額 ($)</span>
+          </div>
+        </div>
+
+        <div class="metric-card">
+          <div class="metric-title">
+            <span>F 統計量檢定</span>
+            <span class="badge-tag badge-green">p &lt; 0.0001</span>
+          </div>
+          <div class="metric-val" id="valFStat">347.8</div>
+          <div class="metric-note">
+            <span>迴歸模型具高度統計顯著性</span>
           </div>
         </div>
       </div>
-      <div id="dataStatus" class="mt-2 text-xs flex items-center gap-2 text-emerald-400 hidden">
-        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
-        <span>資料載入成功！已完成模型訓練與矩陣求逆計算。</span>
+
+      <!-- 當前啟用特徵標籤 -->
+      <div style="background: white; border: 1px solid var(--slate-200); border-radius: var(--radius-md); padding: 14px 20px; margin-bottom: 24px; display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px;">
+        <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+          <span style="font-size: 13px; font-weight: 700; color: var(--slate-700);">
+            <i class="fa-solid fa-check-double" style="color: var(--primary);"></i> 當前模型包含特徵 (<span id="featuresCount">2</span>):
+          </span>
+          <div id="featuresListChips" style="display: flex; gap: 8px; flex-wrap: wrap;">
+            <span class="feature-chip">研發支出 (R&D Spend)</span>
+            <span class="feature-chip">行銷推廣支出 (Marketing Spend)</span>
+          </div>
+        </div>
+        <div id="parsimonyNotice" class="badge-tag badge-green" style="font-size: 12px; padding: 4px 10px;">
+          <i class="fa-solid fa-star"></i> 奧坎剃刀原則：2 特徵模型兼具極致簡潔與最低樣本外預測誤差。
+        </div>
       </div>
-    </section>
 
-    <!-- SECTION: Problem 1 迴歸分析儀表板 -->
-    <div id="problem1Content" class="space-y-6">
-
-      <!-- 統計指標卡片 -->
-      <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <!-- 樣本數量 -->
-        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium text-slate-400">有效樣本數 (N)</span>
-            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
-              <i data-lucide="layers" class="w-4 h-4"></i>
+      <!-- 核心雙圖表 (修正圖表：對齊截圖) -->
+      <div class="dual-charts-grid">
+        <!-- 左圖：RMSE by Number of Features -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h3><i class="fa-solid fa-chart-line" style="color: var(--primary);"></i> 特徵數量 vs RMSE 誤差折線圖 (RMSE by Number of Features)</h3>
+              <div class="card-subtitle">數值越低越好。在 k=2 呈現明顯山谷最低點，k=5 時急遽上升。</div>
             </div>
+            <span class="badge-tag badge-blue" id="rmseChartBadge">Lasso (L1)</span>
           </div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-white" id="metricCount">--</div>
-          <p class="text-[11px] text-slate-500 mt-1">資料行完整記錄</p>
+          <div class="chart-container">
+            <canvas id="rmseChart"></canvas>
+          </div>
         </div>
 
-        <!-- R-Squared -->
-        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium text-slate-400">決定係數 (R²)</span>
-            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
-              <i data-lucide="target" class="w-4 h-4"></i>
+        <!-- 右圖：R-squared by Number of Features -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h3><i class="fa-solid fa-arrow-trend-up" style="color: var(--accent-emerald);"></i> 特徵數量 vs R² 擬合度折線圖 (R-squared by Number of Features)</h3>
+              <div class="card-subtitle">數值越高越好。在 k=2 達到頂點 (0.9474)，k=5 時發生過度擬合驟降。</div>
+            </div>
+            <span class="badge-tag badge-green" id="r2ChartBadge">頂點於 k=2</span>
+          </div>
+          <div class="chart-container">
+            <canvas id="r2Chart"></canvas>
+          </div>
+        </div>
+      </div>
+
+      <!-- 數學迴歸公式卡片 -->
+      <div class="equation-card">
+        <div class="equation-title">
+          <i class="fa-solid fa-square-root-variable"></i> 已擬合之多元線性迴歸公式 (Fitted OLS Regression Equation)
+        </div>
+        <div class="equation-formula" id="equationBox">
+          利潤 (Profit) = 44,050.85 + 0.825 × (研發支出) + 0.024 × (行銷推廣支出)
+        </div>
+      </div>
+
+      <!-- 交互計算區：係數表與即時預測器 -->
+      <div class="calc-grid">
+        
+        <!-- 左側：係數檢定表 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h3><i class="fa-solid fa-table" style="color: var(--primary);"></i> 模型係數與統計顯著性檢定表</h3>
+              <div class="card-subtitle">包含參數估計值、標準誤、t 統計量、p 值、95% 信賴區間與 VIF 共線性指標。</div>
             </div>
           </div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-indigo-400" id="metricR2">--</div>
-          <p class="text-[11px] text-slate-500 mt-1">擬合度衡量標準 (0~1)</p>
-        </div>
-
-        <!-- MAE -->
-        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium text-slate-400">平均絕對誤差 (MAE)</span>
-            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
-              <i data-lucide="activity" class="w-4 h-4"></i>
-            </div>
+          <div class="table-responsive">
+            <table class="data-table" id="coefTable">
+              <thead>
+                <tr>
+                  <th>預測變數 (Predictor)</th>
+                  <th>係數估計值 (β)</th>
+                  <th>標準誤 (Std. Error)</th>
+                  <th>t 檢定值</th>
+                  <th>p 值</th>
+                  <th>95% 信賴區間</th>
+                  <th>VIF 共線性</th>
+                </tr>
+              </thead>
+              <tbody id="coefTableBody">
+                <!-- JS 動態生成 -->
+              </tbody>
+            </table>
           </div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400" id="metricMAE">--</div>
-          <p class="text-[11px] text-slate-500 mt-1">平均利潤預測偏誤</p>
         </div>
 
-        <!-- RMSE -->
-        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
-          <div class="flex items-center justify-between mb-2">
-            <span class="text-xs font-medium text-slate-400">均方根誤差 (RMSE)</span>
-            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
-              <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+        <!-- 右側：即時利潤預測器 -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title-group">
+              <h3><i class="fa-solid fa-calculator" style="color: var(--accent-emerald);"></i> 即時利潤預測器 (Live Predictor)</h3>
+              <div class="card-subtitle">調整輸入數值，即時以目前啟用模型計算預期利潤。</div>
             </div>
+            <span class="badge-tag badge-green"><i class="fa-solid fa-bolt"></i> 即時響應</span>
           </div>
-          <div class="text-2xl sm:text-3xl font-extrabold text-amber-400" id="metricRMSE">--</div>
-          <p class="text-[11px] text-slate-500 mt-1">對異常值較敏感之誤差</p>
-        </div>
-      </section>
 
-      <!-- 數學常態方程式與模型權重公式 -->
-      <section class="glass-card rounded-2xl p-4 sm:p-5 border border-indigo-500/20">
-        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
           <div>
-            <div class="flex items-center gap-2">
-              <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-xs font-mono font-bold">Normal Equation</span>
-              <h2 class="text-sm font-semibold text-white">常態方程式解析解求解公式： θ = (XᵀX)⁻¹Xᵀy</h2>
-            </div>
-            <p class="text-xs text-slate-400 mt-1">
-              純前端使用 <span class="text-indigo-300 font-mono">math.js</span> 直接求解矩陣逆矩陣，無須迭代梯度下降即可精準獲得全局最佳解。
-            </p>
-          </div>
-          <div id="equationDisplay" class="bg-slate-900/90 rounded-xl px-4 py-2.5 font-mono text-xs sm:text-sm text-indigo-300 border border-slate-800 break-all">
-            計算中...
-          </div>
-        </div>
-      </section>
-
-      <!-- 主要主體：圖表與即時預測器 -->
-      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-        <!-- 左側：Chart.js 散佈圖 (8 cols) -->
-        <div class="lg:col-span-7 glass-card rounded-2xl p-5 flex flex-col justify-between">
-          <div>
-            <div class="flex items-center justify-between mb-4">
-              <div>
-                <h3 class="text-base font-semibold text-white flex items-center gap-2">
-                  <i data-lucide="scatter-chart" class="w-5 h-5 text-indigo-400"></i>
-                  實際利潤 vs 模型預測利潤
-                </h3>
-                <p class="text-xs text-slate-400 mt-0.5">點越接近對角虛線（Ideal Line），表示模型預測越精確</p>
+            <!-- 研發支出 -->
+            <div class="input-group">
+              <div class="input-label-row">
+                <span>研發支出 (R&D Spend, $)</span>
+                <span id="labelRD" style="color: var(--primary); font-family: 'Fira Code', monospace;">$100,000</span>
               </div>
-              <span class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">Chart.js</span>
+              <input type="number" id="numRD" class="input-field" value="100000" min="0" max="250000" step="5000">
+              <input type="range" id="rangeRD" class="range-slider" value="100000" min="0" max="250000" step="5000">
             </div>
-            <div class="relative w-full h-80 sm:h-96">
-              <canvas id="scatterChart"></canvas>
-            </div>
-          </div>
-          <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
-            <span>● 點狀標記：實際觀察值與預測配對</span>
-            <span>- - 虛線：y = x 完美擬合參考線</span>
-          </div>
-        </div>
 
-        <!-- 右側：即時預測器 Live Predictor (5 cols) -->
-        <div class="lg:col-span-5 glass-card rounded-2xl p-5 flex flex-col justify-between space-y-5">
-          <div>
-            <div class="flex items-center justify-between mb-3">
-              <h3 class="text-base font-semibold text-white flex items-center gap-2">
-                <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
-                即時預測器 (Live Predictor)
-              </h3>
-              <span class="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full font-medium">即時響應</span>
-            </div>
-            <p class="text-xs text-slate-400 mb-5">拖動下方滑桿即可即時利用迴歸模型推論估算企業預期利潤。</p>
-
-            <!-- 滑桿控制項群組 -->
-            <div class="space-y-5">
-              <!-- Slider 1: R&D Spend -->
-              <div class="space-y-1.5">
-                <div class="flex justify-between text-xs">
-                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
-                    研發支出 (R&D Spend)
-                  </span>
-                  <span id="rdValText" class="font-mono text-indigo-300 font-bold">$100,000</span>
-                </div>
-                <input 
-                  type="range" 
-                  id="rdSlider" 
-                  min="0" 
-                  max="200000" 
-                  step="1000" 
-                  value="100000" 
-                  class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none"
-                />
-                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                  <span>$0</span>
-                  <span>$100,000</span>
-                  <span>$200,000</span>
-                </div>
+            <!-- 行銷推廣 -->
+            <div class="input-group">
+              <div class="input-label-row">
+                <span>行銷推廣支出 (Marketing Spend, $)</span>
+                <span id="labelMkt" style="color: var(--primary); font-family: 'Fira Code', monospace;">$150,000</span>
               </div>
-
-              <!-- Slider 2: Administration -->
-              <div class="space-y-1.5">
-                <div class="flex justify-between text-xs">
-                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-violet-500"></span>
-                    行政管理支出 (Administration)
-                  </span>
-                  <span id="admValText" class="font-mono text-violet-300 font-bold">$120,000</span>
-                </div>
-                <input 
-                  type="range" 
-                  id="admSlider" 
-                  min="0" 
-                  max="200000" 
-                  step="1000" 
-                  value="120000" 
-                  class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none"
-                />
-                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                  <span>$0</span>
-                  <span>$100,000</span>
-                  <span>$200,000</span>
-                </div>
-              </div>
-
-              <!-- Slider 3: Marketing Spend -->
-              <div class="space-y-1.5">
-                <div class="flex justify-between text-xs">
-                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
-                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
-                    行銷推廣支出 (Marketing Spend)
-                  </span>
-                  <span id="mktValText" class="font-mono text-cyan-300 font-bold">$150,000</span>
-                </div>
-                <input 
-                  type="range" 
-                  id="mktSlider" 
-                  min="0" 
-                  max="500000" 
-                  step="2000" 
-                  value="150000" 
-                  class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none"
-                />
-                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
-                  <span>$0</span>
-                  <span>$250,000</span>
-                  <span>$500,000</span>
-                </div>
-              </div>
+              <input type="number" id="numMkt" class="input-field" value="150000" min="0" max="500000" step="5000">
+              <input type="range" id="rangeMkt" class="range-slider" value="150000" min="0" max="500000" step="5000">
             </div>
-          </div>
 
-          <!-- 預測結果展示卡 -->
-          <div class="bg-gradient-to-br from-indigo-950/80 to-slate-900 border border-indigo-500/30 rounded-2xl p-5 text-center shadow-lg relative overflow-hidden">
-            <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-indigo-500/20 rounded-full blur-xl"></div>
-            <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">預測年度利潤 (Estimated Profit)</span>
-            <div id="predictedProfit" class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-100 to-cyan-300 my-2 font-mono">
-              $0.00
+            <!-- 行政管理 -->
+            <div class="input-group" id="inputGroupAdmin">
+              <div class="input-label-row">
+                <span>行政管理支出 (Administration, $)</span>
+                <span id="labelAdmin" style="color: var(--slate-500); font-family: 'Fira Code', monospace;">$120,000</span>
+              </div>
+              <input type="number" id="numAdmin" class="input-field" value="120000" min="0" max="250000" step="5000">
+              <input type="range" id="rangeAdmin" class="range-slider" value="120000" min="0" max="250000" step="5000">
             </div>
-            <div class="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
-              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
-              <span>基於目前數值即時計算中</span>
+
+            <!-- 州別 -->
+            <div class="input-group" id="inputGroupState">
+              <div class="input-label-row">
+                <span>公司所在州別 (State Location)</span>
+              </div>
+              <select id="selectState" class="input-field">
+                <option value="California">加州 California (基準類別)</option>
+                <option value="New York">紐約州 New York</option>
+                <option value="Florida">佛羅里達州 Florida</option>
+              </select>
+            </div>
+
+            <!-- 預測結果卡片 -->
+            <div class="prediction-output-box">
+              <div class="pred-label">預測新創企業利潤 (Estimated Profit)</div>
+              <div class="pred-value" id="predProfitOutput">$130,154.20</div>
+              <div class="pred-formula-note" id="predFormulaNote">
+                公式計算：β₀ + β₁(研發支出) + β₂(行銷推廣)
+              </div>
             </div>
           </div>
         </div>
-      </section>
 
-      <!-- 特徵係數表 -->
-      <section class="glass-card rounded-2xl p-5 overflow-hidden">
-        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
-          <i data-lucide="table" class="w-4 h-4 text-indigo-400"></i>
-          模型特徵係數權重清單 (Model Weights)
-        </h3>
-        <div class="overflow-x-auto">
-          <table class="w-full text-left text-xs sm:text-sm">
-            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+      </div>
+
+      <!-- 殘差與異常值診斷分析表 -->
+      <div class="card" style="margin-top: 24px;">
+        <div class="card-header">
+          <div class="card-title-group">
+            <h3><i class="fa-solid fa-magnifying-glass" style="color: var(--accent-amber);"></i> 測試集殘差與異常值診斷 (Residuals & Outliers Diagnostic)</h3>
+            <div class="card-subtitle">針對獨立樣本外測試集 (10 家新創公司) 依絕對殘差金額排序之模型表現。</div>
+          </div>
+          <span class="badge-tag badge-blue"><i class="fa-solid fa-filter"></i> 依 |殘差| 排序</span>
+        </div>
+        <div class="table-responsive">
+          <table class="data-table">
+            <thead>
               <tr>
-                <th class="py-3 px-4 font-semibold">特徵名稱 (Feature)</th>
-                <th class="py-3 px-4 font-semibold">數學符號</th>
-                <th class="py-3 px-4 font-semibold">權重係數 (Coefficient)</th>
-                <th class="py-3 px-4 font-semibold">商業意義解讀</th>
+                <th>排名</th>
+                <th>樣本編號</th>
+                <th>實際利潤 (Actual)</th>
+                <th>模型預測利潤 (Pred)</th>
+                <th>殘差金額 (Residual)</th>
+                <th>絕對誤差 (MAE)</th>
+                <th>百分比誤差 (% Err)</th>
+                <th>診斷狀態</th>
               </tr>
             </thead>
-            <tbody id="coefficientsTable" class="divide-y divide-slate-800/60 text-slate-200 font-mono">
-              <!-- JS 動態插入 -->
+            <tbody id="outliersTableBody">
+              <!-- JS 動態生成 -->
             </tbody>
           </table>
         </div>
-      </section>
+      </div>
+
     </div>
 
-    <!-- SECTION: Problem 2 現代感佔位區塊 (預設隱藏) -->
-    <div id="problem2Content" class="hidden">
-      <div class="glass-card rounded-3xl p-8 sm:p-16 border border-indigo-500/30 text-center relative overflow-hidden shadow-2xl">
-        <!-- 裝飾光暈 -->
-        <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-b from-indigo-500/20 to-purple-500/0 rounded-full blur-3xl pointer-events-none"></div>
-
-        <div class="max-w-xl mx-auto space-y-6 relative z-10">
-          <!-- 脈動動態圖示 -->
-          <div class="relative w-24 h-24 mx-auto">
-            <div class="absolute inset-0 rounded-3xl bg-indigo-500/20 animate-ping opacity-50"></div>
-            <div class="relative w-24 h-24 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center shadow-xl shadow-indigo-500/30">
-              <i data-lucide="cpu" class="w-12 h-12 text-white"></i>
-            </div>
-          </div>
-
-          <div class="space-y-2">
-            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Auto-Workflow Integration Active
-            </div>
-            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
-              Problem 2: 直接套用 Skill or Workflow
-            </h2>
-            <p class="text-sm sm:text-base text-slate-300 leading-relaxed">
-              已套用 Workflow / Skill，準備連接至其他模型 API
-            </p>
-          </div>
-
-          <!-- 模擬串接端點狀態 -->
-          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 text-left">
-            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div class="text-[11px] text-slate-400">Agentic Skill</div>
-              <div class="text-xs font-bold text-slate-200 mt-1 flex items-center gap-1.5">
-                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
-                50-Startups Pipeline
-              </div>
-            </div>
-            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div class="text-[11px] text-slate-400">Target Endpoint</div>
-              <div class="text-xs font-bold text-slate-200 mt-1 flex items-center gap-1.5">
-                <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-400"></i>
-                REST / gRPC Stream
-              </div>
-            </div>
-            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
-              <div class="text-[11px] text-slate-400">Execution Mode</div>
-              <div class="text-xs font-bold text-slate-200 mt-1 flex items-center gap-1.5">
-                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
-                Zero-Latency Client
-              </div>
-            </div>
-          </div>
-
-          <div class="pt-2">
-            <button onclick="document.getElementById('problemSelect').value='problem1'; document.getElementById('problemSelect').dispatchEvent(new Event('change'));" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm text-slate-200 font-medium border border-slate-700 transition">
-              返回 Problem 1 迴歸分析儀表板
-            </button>
-          </div>
+    <!-- Problem 2 佔位區塊 (預設隱藏) -->
+    <div id="problem2Content" style="display: none;">
+      <div class="placeholder-box">
+        <div style="width: 80px; height: 80px; margin: 0 auto 20px; background: var(--primary-subtle); color: var(--primary); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 32px;">
+          <i class="fa-solid fa-cubes-stacked"></i>
         </div>
+        <h2 style="font-size: 26px; color: var(--slate-900); margin-bottom: 12px;">Problem 2: 直接套用 Skill or Workflow</h2>
+        <p style="font-size: 16px; color: var(--slate-600); max-width: 600px; margin: 0 auto 24px;">
+          已套用 Workflow / Skill，準備連接至其他模型 API
+        </p>
+        <button onclick="document.getElementById('problemSelect').value='problem1'; document.getElementById('problemSelect').dispatchEvent(new Event('change'));" class="tab-btn active">
+          返回 Problem 1 迴歸分析儀表板
+        </button>
       </div>
     </div>
 
-  </main>
+  </div>
 
   <!-- 頁腳 -->
-  <footer class="border-t border-slate-900 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
-    50 Startups Multiple Linear Regression Analysis Studio • Pure Client-Side Machine Learning with math.js & Chart.js
+  <footer>
+    <div class="footer-inner">
+      <div style="max-width: 650px;">
+        <h4 style="font-size: 16px; margin-bottom: 8px; color: var(--slate-900);">
+          <i class="fa-solid fa-building-columns"></i> 50 Startups CRISP-DM 機器學習專案
+        </h4>
+        <p style="line-height: 1.6; font-size: 13px;">
+          專為多元線性迴歸模型篩選、精簡度檢驗（Parsimony Principle）與統計推論設計。純純前端技術開發（Vanilla HTML5、CSS3、JavaScript 與 Chart.js）。
+        </p>
+      </div>
+
+      <div style="max-width: 550px;">
+        <h4 style="font-size: 14px; text-transform: uppercase; letter-spacing: 0.05em; color: var(--slate-400); margin-bottom: 8px;">
+          參考來源與致謝
+        </h4>
+        <div class="ack-card">
+          <strong>圖表與樣式風格：</strong><br>
+          參考 StatsUnlock 多元線性迴歸計算器風格與兩大核心指標折線圖（RMSE 與 R² 隨特徵數量之變化）。<br>
+          <strong>資料集：</strong> 50 Startups Dataset (Avik Jain 100-Days-Of-ML)。
+        </div>
+      </div>
+    </div>
   </footer>
 
-  <!-- 核心 JavaScript 邏輯 -->
+  <!-- 應用程式互動邏輯 -->
   <script>
-    // 初始化 Lucide 圖示
-    lucide.createIcons();
+    // 狀態管理
+    let currentAlgo = 'Lasso';
+    let currentK = 2; // 預設為黃金平衡點 k=2
+    let rmseChartInstance = null;
+    let r2ChartInstance = null;
 
-    // 全域變數
-    let currentModel = {
-      weights: [0, 0, 0], // [R&D, Administration, Marketing]
-      intercept: 0,
-      r2: 0,
-      mae: 0,
-      rmse: 0,
-      count: 0
+    const ALGO_COLORS = {
+      'Lasso': '#4f46e5',
+      'Forward SFS': '#ff7f0e',
+      'RFE': '#2ca02c',
+      'ElasticNet': '#d62728',
+      'Exhaustive': '#9467bd'
     };
-    let scatterChartInstance = null;
 
-    // 格式化貨幣函式
-    function formatCurrency(val) {
-      return new Intl.NumberFormat('en-US', {
-        style: 'currency',
-        currency: 'USD',
-        minimumFractionDigits: 2,
-        maximumFractionDigits: 2
-      }).format(val);
+    const ALGO_NAMES_ZH = {
+      'Lasso': 'Lasso (L1 懲罰)',
+      'Forward SFS': '前向逐步選擇 (Forward SFS)',
+      'RFE': '遞迴特徵消除 (RFE)',
+      'ElasticNet': '彈性網路 (ElasticNet)',
+      'Exhaustive': '全子集窮舉搜尋 (Exhaustive)'
+    };
+
+    const FEATURE_NAMES_ZH = {
+      'R&D Spend': '研發支出 (R&D Spend)',
+      'Marketing Spend': '行銷推廣支出 (Marketing Spend)',
+      'Administration': '行政管理支出 (Administration)',
+      'State_Florida': '佛羅里達州 (State_Florida)',
+      'State_New York': '紐約州 (State_New York)'
+    };
+
+    document.addEventListener('DOMContentLoaded', () => {
+      initCharts();
+      setupEventListeners();
+      updateDashboard();
+    });
+
+    function setupEventListeners() {
+      // 任務切換 (Problem 1 vs Problem 2)
+      const problemSelect = document.getElementById('problemSelect');
+      problemSelect.addEventListener('change', (e) => {
+        const val = e.target.value;
+        if (val === 'problem1') {
+          document.getElementById('problem1Content').style.display = 'block';
+          document.getElementById('problem2Content').style.display = 'none';
+          if (rmseChartInstance) rmseChartInstance.resize();
+          if (r2ChartInstance) r2ChartInstance.resize();
+        } else {
+          document.getElementById('problem1Content').style.display = 'none';
+          document.getElementById('problem2Content').style.display = 'block';
+        }
+      });
+
+      // 演算法切換標籤
+      const tabs = document.querySelectorAll('#algoTabs .tab-btn');
+      tabs.forEach(btn => {
+        btn.addEventListener('click', () => {
+          tabs.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentAlgo = btn.dataset.algo;
+          updateDashboard();
+        });
+      });
+
+      // 特徵數 k 切換按鈕
+      const kBtns = document.querySelectorAll('#kSelectorGroup .k-btn');
+      kBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          kBtns.forEach(b => b.classList.remove('active'));
+          btn.classList.add('active');
+          currentK = parseInt(btn.dataset.k);
+          updateDashboard();
+        });
+      });
+
+      // 即時計算器滑桿與數字輸入連動
+      const syncInput = (sliderId, numId, labelId, prefix = '$') => {
+        const slider = document.getElementById(sliderId);
+        const num = document.getElementById(numId);
+        const label = document.getElementById(labelId);
+
+        slider.addEventListener('input', (e) => {
+          num.value = e.target.value;
+          label.textContent = prefix + Number(e.target.value).toLocaleString();
+          calculateLivePrediction();
+        });
+
+        num.addEventListener('input', (e) => {
+          slider.value = e.target.value;
+          label.textContent = prefix + Number(e.target.value).toLocaleString();
+          calculateLivePrediction();
+        });
+      };
+
+      syncInput('rangeRD', 'numRD', 'labelRD');
+      syncInput('rangeMkt', 'numMkt', 'labelMkt');
+      syncInput('rangeAdmin', 'numAdmin', 'labelAdmin');
+      document.getElementById('selectState').addEventListener('change', calculateLivePrediction);
     }
 
-    // ============================================================
-    // 1. 版面與任務切換 (加分條件 1)
-    // ============================================================
-    const problemSelect = document.getElementById('problemSelect');
-    const problem1Content = document.getElementById('problem1Content');
-    const problem2Content = document.getElementById('problem2Content');
-
-    problemSelect.addEventListener('change', (e) => {
-      const selected = e.target.value;
-      if (selected === 'problem1') {
-        problem1Content.classList.remove('hidden');
-        problem2Content.classList.add('hidden');
-        // 若有圖表需要 resize
-        if (scatterChartInstance) scatterChartInstance.resize();
-      } else {
-        problem1Content.classList.add('hidden');
-        problem2Content.classList.remove('hidden');
+    function getActiveModelData() {
+      if (!window.MODEL_DATA) return null;
+      if (currentAlgo === 'ALL') {
+        return window.MODEL_DATA['Lasso'][currentK - 1];
       }
-    });
-
-    // ============================================================
-    // 2. 自訂資料集載入與解析 (加分條件 2)
-    // ============================================================
-    const csvUrlInput = document.getElementById('csvUrlInput');
-    const loadDataBtn = document.getElementById('loadDataBtn');
-    const useLocalBtn = document.getElementById('useLocalBtn');
-    const btnText = document.getElementById('btnText');
-    const dataStatus = document.getElementById('dataStatus');
-
-    loadDataBtn.addEventListener('click', () => {
-      const url = csvUrlInput.value.trim();
-      if (!url) {
-        alert('請輸入有效的 CSV 檔案網址');
-        return;
-      }
-      fetchAndTrain(url);
-    });
-
-    useLocalBtn.addEventListener('click', () => {
-      csvUrlInput.value = './50_Startups.csv';
-      fetchAndTrain('./50_Startups.csv');
-    });
-
-    function setBtnLoading(isLoading) {
-      if (isLoading) {
-        loadDataBtn.disabled = true;
-        btnText.textContent = '載入中...';
-        loadDataBtn.classList.add('opacity-75');
-      } else {
-        loadDataBtn.disabled = false;
-        btnText.textContent = '載入資料';
-        loadDataBtn.classList.remove('opacity-75');
-      }
+      return window.MODEL_DATA[currentAlgo][currentK - 1];
     }
 
-    function fetchAndTrain(csvSource) {
-      setBtnLoading(true);
+    function updateDashboard() {
+      const data = getActiveModelData();
+      if (!data) return;
 
-      Papa.parse(csvSource, {
-        download: true,
-        header: true,
-        dynamicTyping: true,
-        skipEmptyLines: true,
-        complete: function(results) {
-          setBtnLoading(false);
-          const data = results.data;
-          if (!data || data.length === 0) {
-            alert('無法獲取有效資料，請檢查 CSV 網址是否支援 CORS 或檔案路徑正確');
-            return;
-          }
+      // 更新指標卡片
+      document.getElementById('valRMSE').textContent = '$' + data.rmse.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('valR2').textContent = data.r2.toFixed(4);
+      document.getElementById('valAdjR2').textContent = data.adj_r2 ? data.adj_r2.toFixed(4) : 'N/A';
+      document.getElementById('valMAE').textContent = '$' + data.mae.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      document.getElementById('valFStat').textContent = data.f_stat ? data.f_stat.toFixed(1) : '347.8';
 
-          trainNormalEquationModel(data);
-          dataStatus.classList.remove('hidden');
-          setTimeout(() => {
-            dataStatus.classList.add('hidden');
-          }, 4500);
-        },
-        error: function(err) {
-          setBtnLoading(false);
-          console.error("PapaParse error:", err);
-          // 若遠端失敗，嘗試載入本地檔案做備援
-          if (csvSource !== './50_Startups.csv') {
-            alert(`遠端資料載入失敗（可能受限於 CORS），自動切換至本機備份 50_Startups.csv`);
-            csvUrlInput.value = './50_Startups.csv';
-            fetchAndTrain('./50_Startups.csv');
+      // 最佳點與過度擬合標籤徽章
+      const rmseBadge = document.getElementById('rmseBadge');
+      if (currentK === 2) {
+        rmseBadge.className = 'badge-tag badge-green';
+        rmseBadge.innerHTML = '<i class="fa-solid fa-award"></i> 最佳黃金平衡點';
+      } else if (currentK === 5) {
+        rmseBadge.className = 'badge-tag badge-amber';
+        rmseBadge.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 過度擬合警示';
+      } else {
+        rmseBadge.className = 'badge-tag badge-blue';
+        rmseBadge.innerHTML = `<i class="fa-solid fa-chart-simple"></i> k = ${currentK}`;
+      }
+
+      // 更新特徵數量與晶片標籤
+      document.getElementById('featuresCount').textContent = data.features.length;
+      const chipsContainer = document.getElementById('featuresListChips');
+      chipsContainer.innerHTML = '';
+      data.features.forEach(feat => {
+        const span = document.createElement('span');
+        span.className = 'feature-chip';
+        span.textContent = FEATURE_NAMES_ZH[feat] || feat;
+        chipsContainer.appendChild(span);
+      });
+
+      // 奧坎剃刀提示
+      const parsimonyNotice = document.getElementById('parsimonyNotice');
+      if (currentK === 2) {
+        parsimonyNotice.className = 'badge-tag badge-green';
+        parsimonyNotice.innerHTML = '<i class="fa-solid fa-star"></i> 奧坎剃刀原則：2 特徵模型達到最佳精簡度與最低預測誤差。';
+      } else if (currentK === 5) {
+        parsimonyNotice.className = 'badge-tag badge-amber';
+        parsimonyNotice.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> 參數過多：加入雜訊變數導致樣本外 RMSE 上升。';
+      } else {
+        parsimonyNotice.className = 'badge-tag badge-blue';
+        parsimonyNotice.innerHTML = `<i class="fa-solid fa-circle-info"></i> 目前模型使用 ${currentK} 個預測變數。`;
+      }
+
+      // 組合數學方程式字串
+      let eqStr = '利潤 (Profit) = ';
+      const interceptObj = data.coefficients.find(c => c.feature.includes('Intercept'));
+      if (interceptObj) {
+        eqStr += interceptObj.coef.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      }
+
+      data.coefficients.forEach(c => {
+        if (!c.feature.includes('Intercept')) {
+          const sign = c.coef >= 0 ? ' + ' : ' - ';
+          const featName = FEATURE_NAMES_ZH[c.feature] || c.feature;
+          eqStr += `${sign}${Math.abs(c.coef).toFixed(3)} × (${featName})`;
+        }
+      });
+      document.getElementById('equationBox').textContent = eqStr;
+
+      // 輸入項啟用/禁用狀態
+      const hasAdmin = data.features.includes('Administration');
+      const hasState = data.features.some(f => f.includes('State'));
+      document.getElementById('inputGroupAdmin').style.opacity = hasAdmin ? '1' : '0.45';
+      document.getElementById('inputGroupState').style.opacity = hasState ? '1' : '0.45';
+
+      // 更新表格、即時預測與折線圖
+      updateCoefficientsTable(data.coefficients);
+      updateOutliersTable(data.outliers);
+      calculateLivePrediction();
+      updateCharts();
+    }
+
+    function updateCoefficientsTable(coefficients) {
+      const tbody = document.getElementById('coefTableBody');
+      tbody.innerHTML = '';
+
+      coefficients.forEach(c => {
+        const tr = document.createElement('tr');
+        const isIntercept = c.feature.includes('Intercept');
+        const pBadge = c.pvalue < 0.05 
+          ? `<span class="badge-tag badge-green">${c.pvalue < 0.0001 ? '< 0.0001' : c.pvalue.toFixed(4)} <i class="fa-solid fa-check"></i></span>`
+          : `<span class="badge-tag badge-amber">${c.pvalue.toFixed(4)} (不顯著)</span>`;
+        
+        let vifDisplay = '-';
+        if (!isIntercept && c.vif !== null) {
+          if (c.vif < 5) {
+            vifDisplay = `<span class="badge-tag badge-green">${c.vif.toFixed(2)} (安全)</span>`;
           } else {
-            alert('讀取 CSV 資料失敗：' + err.message);
+            vifDisplay = `<span class="badge-tag badge-amber">${c.vif.toFixed(2)} (共線性偏高)</span>`;
           }
         }
+
+        const featureLabel = isIntercept ? '截距 (β₀ / Intercept)' : (FEATURE_NAMES_ZH[c.feature] || c.feature);
+
+        tr.innerHTML = `
+          <td><strong>${featureLabel}</strong></td>
+          <td style="font-family: 'Fira Code', monospace; font-weight: 600;">${c.coef.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })}</td>
+          <td>${c.stderr.toFixed(4)}</td>
+          <td>${c.tstat.toFixed(3)}</td>
+          <td>${pBadge}</td>
+          <td style="font-size: 12px; color: var(--slate-600);">[${c.ci_lower.toFixed(2)}, ${c.ci_upper.toFixed(2)}]</td>
+          <td>${vifDisplay}</td>
+        `;
+        tbody.appendChild(tr);
       });
     }
 
-    // ============================================================
-    // 3. 純前端機器學習：使用 math.js 常態方程式 (Normal Equation)
-    //    θ = (Xᵀ X)⁻¹ Xᵀ y
-    // ============================================================
-    function trainNormalEquationModel(rows) {
-      // 提取特徵：R&D Spend, Administration, Marketing Spend，目標：Profit
-      // 過濾缺少必要數值的列
-      const cleaned = rows.filter(r => {
-        const rd = Number(r['R&D Spend']);
-        const adm = Number(r['Administration']);
-        const mkt = Number(r['Marketing Spend']);
-        const profit = Number(r['Profit']);
-        return !isNaN(rd) && !isNaN(adm) && !isNaN(mkt) && !isNaN(profit);
+    function updateOutliersTable(outliers) {
+      const tbody = document.getElementById('outliersTableBody');
+      tbody.innerHTML = '';
+
+      outliers.forEach(o => {
+        const tr = document.createElement('tr');
+        const isHigh = o.abs_error > 10000;
+        const statusBadge = isHigh 
+          ? `<span class="badge-tag badge-amber"><span class="status-dot dot-amber"></span> 較大殘差</span>`
+          : `<span class="badge-tag badge-green"><span class="status-dot dot-green"></span> 正常範圍</span>`;
+
+        tr.innerHTML = `
+          <td style="font-weight: 700;">#${o.rank}</td>
+          <td>新創公司 #${o.index}</td>
+          <td style="font-family: 'Fira Code', monospace;">$${o.actual.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="font-family: 'Fira Code', monospace;">$${o.predicted.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td style="color: ${o.residual >= 0 ? '#059669' : '#dc2626'}; font-weight: 600;">${o.residual >= 0 ? '+' : ''}$${o.residual.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>$${o.abs_error.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+          <td>${o.pct_error.toFixed(2)}%</td>
+          <td>${statusBadge}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function calculateLivePrediction() {
+      const data = getActiveModelData();
+      if (!data) return;
+
+      const rd = parseFloat(document.getElementById('numRD').value) || 0;
+      const mkt = parseFloat(document.getElementById('numMkt').value) || 0;
+      const admin = parseFloat(document.getElementById('numAdmin').value) || 0;
+      const state = document.getElementById('selectState').value;
+
+      let pred = 0;
+      let usedFeatures = [];
+
+      data.coefficients.forEach(c => {
+        if (c.feature.includes('Intercept')) {
+          pred += c.coef;
+        } else if (c.feature === 'R&D Spend') {
+          pred += c.coef * rd;
+          usedFeatures.push(`研發: +$${(c.coef * rd).toFixed(0)}`);
+        } else if (c.feature === 'Marketing Spend') {
+          pred += c.coef * mkt;
+          usedFeatures.push(`行銷: +$${(c.coef * mkt).toFixed(0)}`);
+        } else if (c.feature === 'Administration') {
+          pred += c.coef * admin;
+          usedFeatures.push(`管理: ${(c.coef * admin >= 0 ? '+' : '')}$${(c.coef * admin).toFixed(0)}`);
+        } else if (c.feature === 'State_Florida' && state === 'Florida') {
+          pred += c.coef * 1;
+          usedFeatures.push(`佛州虛擬變數: ${(c.coef >= 0 ? '+' : '')}$${c.coef.toFixed(0)}`);
+        } else if (c.feature === 'State_New York' && state === 'New York') {
+          pred += c.coef * 1;
+          usedFeatures.push(`紐約虛擬變數: ${(c.coef >= 0 ? '+' : '')}$${c.coef.toFixed(0)}`);
+        }
       });
 
-      if (cleaned.length < 4) {
-        alert('有效資料樣本不足以訓練多元線性迴歸');
-        return;
-      }
-
-      const N = cleaned.length;
-      
-      // 構建設計矩陣 X (包含常數項 1 作為 Intercept)
-      // X: [ [1, rd, adm, mkt], ... ] (N x 4)
-      const X_data = [];
-      const y_data = [];
-
-      for (let i = 0; i < N; i++) {
-        const r = cleaned[i];
-        const rd = Number(r['R&D Spend']);
-        const adm = Number(r['Administration']);
-        const mkt = Number(r['Marketing Spend']);
-        const profit = Number(r['Profit']);
-
-        X_data.push([1.0, rd, adm, mkt]);
-        y_data.push([profit]);
-      }
-
-      // 轉換成 math.js 矩陣
-      const X = math.matrix(X_data);
-      const y = math.matrix(y_data);
-
-      // 常態方程式：theta = inv(X' * X) * X' * y
-      try {
-        const Xt = math.transpose(X);
-        const XtX = math.multiply(Xt, X);
-        const XtX_inv = math.inv(XtX);
-        const XtY = math.multiply(Xt, y);
-        const theta = math.multiply(XtX_inv, XtY);
-
-        // 提取權重
-        const thetaArray = theta.toArray().map(val => val[0]);
-        const intercept = thetaArray[0];
-        const w_rd = thetaArray[1];
-        const w_adm = thetaArray[2];
-        const w_mkt = thetaArray[3];
-
-        currentModel.intercept = intercept;
-        currentModel.weights = [w_rd, w_adm, w_mkt];
-        currentModel.count = N;
-
-        // 計算預測值、殘差與評估指標 (R2, MAE, RMSE)
-        const y_actuals = [];
-        const y_predictions = [];
-        let sumAbsoluteError = 0;
-        let sumSquaredError = 0;
-        let sumActual = 0;
-
-        for (let i = 0; i < N; i++) {
-          const rd = X_data[i][1];
-          const adm = X_data[i][2];
-          const mkt = X_data[i][3];
-          const actual = y_data[i][0];
-
-          const pred = intercept + (w_rd * rd) + (w_adm * adm) + (w_mkt * mkt);
-          y_actuals.push(actual);
-          y_predictions.push(pred);
-
-          const err = actual - pred;
-          sumAbsoluteError += Math.abs(err);
-          sumSquaredError += (err * err);
-          sumActual += actual;
-        }
-
-        const y_mean = sumActual / N;
-        let totalSumSquares = 0;
-        for (let i = 0; i < N; i++) {
-          const diff = y_actuals[i] - y_mean;
-          totalSumSquares += (diff * diff);
-        }
-
-        const r2 = 1 - (sumSquaredError / totalSumSquares);
-        const mae = sumAbsoluteError / N;
-        const rmse = Math.sqrt(sumSquaredError / N);
-
-        currentModel.r2 = r2;
-        currentModel.mae = mae;
-        currentModel.rmse = rmse;
-
-        // 更新 UI
-        updateMetricCards(N, r2, mae, rmse);
-        updateEquationDisplay(intercept, w_rd, w_adm, w_mkt);
-        updateCoefficientsTable(intercept, w_rd, w_adm, w_mkt);
-        renderScatterChart(y_actuals, y_predictions);
-        updateLivePrediction();
-
-      } catch (err) {
-        console.error("矩陣求逆計算失敗:", err);
-        alert("常態方程式計算發生奇異矩陣或不可逆錯誤：" + err.message);
-      }
+      document.getElementById('predProfitOutput').textContent = '$' + pred.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+      const zhFeatures = data.features.map(f => FEATURE_NAMES_ZH[f] || f);
+      document.getElementById('predFormulaNote').innerHTML = `目前模型特徵：${zhFeatures.join(', ')}<br><span style="font-size: 11px; color: #cbd5e1;">(${usedFeatures.join(' | ')})</span>`;
     }
 
-    // 更新指標卡片
-    function updateMetricCards(count, r2, mae, rmse) {
-      document.getElementById('metricCount').textContent = count;
-      document.getElementById('metricR2').textContent = r2.toFixed(4);
-      document.getElementById('metricMAE').textContent = formatCurrency(mae);
-      document.getElementById('metricRMSE').textContent = formatCurrency(rmse);
-    }
+    // 初始化 Chart.js 折線圖（精準對齊使用者截圖）
+    function initCharts() {
+      const ctxRMSE = document.getElementById('rmseChart').getContext('2d');
+      const ctxR2 = document.getElementById('r2Chart').getContext('2d');
 
-    // 更新常態方程式字串
-    function updateEquationDisplay(intercept, w1, w2, w3) {
-      const signW2 = w2 >= 0 ? `+ ${w2.toFixed(4)}` : `- ${Math.abs(w2).toFixed(4)}`;
-      const signW3 = w3 >= 0 ? `+ ${w3.toFixed(4)}` : `- ${Math.abs(w3).toFixed(4)}`;
-      const eqStr = `Profit = ${intercept.toFixed(2)} + ${w1.toFixed(4)} × (R&D) ${signW2} × (Admin) ${signW3} × (Marketing)`;
-      document.getElementById('equationDisplay').textContent = eqStr;
-    }
-
-    // 更新特徵係數表
-    function updateCoefficientsTable(b0, b1, b2, b3) {
-      const tbody = document.getElementById('coefficientsTable');
-      const data = [
-        { name: "截距 (Intercept / Bias)", symbol: "θ₀ (b)", coef: b0.toFixed(2), desc: "基礎利潤基準值" },
-        { name: "研發支出 (R&D Spend)", symbol: "θ₁", coef: b1.toFixed(4), desc: `每投入 $1 研發，預計增加利潤 $${b1.toFixed(2)}` },
-        { name: "行政管理 (Administration)", symbol: "θ₂", coef: b2.toFixed(4), desc: `行政管理費用對利潤的邊際影響` },
-        { name: "行銷推廣 (Marketing Spend)", symbol: "θ₃", coef: b3.toFixed(4), desc: `每投入 $1 行銷，預計增加利潤 $${b3.toFixed(2)}` },
-      ];
-
-      tbody.innerHTML = data.map(item => `
-        <tr class="hover:bg-slate-800/40 transition">
-          <td class="py-2.5 px-4 font-sans text-slate-200">${item.name}</td>
-          <td class="py-2.5 px-4 text-indigo-400 font-bold">${item.symbol}</td>
-          <td class="py-2.5 px-4 ${parseFloat(item.coef) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.coef}</td>
-          <td class="py-2.5 px-4 font-sans text-slate-400 text-xs">${item.desc}</td>
-        </tr>
-      `).join('');
-    }
-
-    // ============================================================
-    // 4. 繪製 Chart.js 實際 vs 預測散佈圖
-    // ============================================================
-    function renderScatterChart(actuals, preds) {
-      const ctx = document.getElementById('scatterChart').getContext('2d');
-      
-      const scatterPoints = actuals.map((act, i) => ({
-        x: act,
-        y: preds[i]
-      }));
-
-      const allVals = [...actuals, ...preds];
-      const minVal = Math.floor(Math.min(...allVals) * 0.9);
-      const maxVal = Math.ceil(Math.max(...allVals) * 1.05);
-
-      // 理想對角線資料
-      const idealLine = [
-        { x: minVal, y: minVal },
-        { x: maxVal, y: maxVal }
-      ];
-
-      if (scatterChartInstance) {
-        scatterChartInstance.destroy();
-      }
-
-      scatterChartInstance = new Chart(ctx, {
-        type: 'scatter',
-        data: {
-          datasets: [
-            {
-              label: '樣本觀測點 (Actual vs Predicted)',
-              data: scatterPoints,
-              backgroundColor: 'rgba(99, 102, 241, 0.75)',
-              borderColor: '#818cf8',
-              borderWidth: 1.5,
-              pointRadius: 6,
-              pointHoverRadius: 9,
-              pointHoverBackgroundColor: '#a5b4fc',
-            },
-            {
-              label: '理想擬合線 (y = x)',
-              data: idealLine,
-              type: 'line',
-              borderColor: 'rgba(239, 68, 68, 0.65)',
-              borderWidth: 2,
-              borderDash: [6, 6],
-              pointRadius: 0,
-              fill: false,
-              tension: 0
-            }
-          ]
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              labels: {
-                color: '#cbd5e1',
-                font: { size: 12, family: 'sans-serif' }
-              }
-            },
-            tooltip: {
-              backgroundColor: '#0f172a',
-              borderColor: '#334155',
-              borderWidth: 1,
-              titleColor: '#f8fafc',
-              bodyColor: '#cbd5e1',
-              callbacks: {
-                label: function(context) {
-                  if (context.datasetIndex === 1) return '理想對角線 (y = x)';
-                  return [
-                    `實際利潤: $${context.parsed.x.toLocaleString()}`,
-                    `預測利潤: $${context.parsed.y.toLocaleString()}`,
-                    `殘差: $${(context.parsed.x - context.parsed.y).toLocaleString()}`
-                  ];
-                }
-              }
-            }
+      const commonOptions = {
+        responsive: true,
+        maintainAspectRatio: false,
+        plugins: {
+          legend: {
+            display: false,
+            position: 'top',
+            labels: { font: { family: 'Inter', size: 12 } }
           },
-          scales: {
-            x: {
-              title: {
-                display: true,
-                text: '實際利潤 (Actual Profit, USD)',
-                color: '#94a3b8',
-                font: { size: 12, weight: '500' }
-              },
-              grid: { color: 'rgba(51, 65, 85, 0.4)' },
-              ticks: {
-                color: '#94a3b8',
-                callback: (val) => '$' + (val / 1000) + 'k'
+          tooltip: {
+            backgroundColor: 'rgba(15, 23, 42, 0.92)',
+            titleFont: { family: 'Outfit', size: 13 },
+            bodyFont: { family: 'Inter', size: 12 },
+            padding: 12,
+            cornerRadius: 8,
+            callbacks: {
+              afterLabel: function(context) {
+                const k = context.dataIndex + 1;
+                const algo = currentAlgo === 'ALL' ? context.dataset.label : currentAlgo;
+                const modelItem = window.MODEL_DATA[algo][k - 1];
+                return '特徵清單: ' + modelItem.features.map(f => FEATURE_NAMES_ZH[f] || f).join(', ');
               }
+            }
+          }
+        },
+        scales: {
+          x: {
+            title: {
+              display: true,
+              text: 'Number of Features (k)',
+              font: { family: 'Inter', weight: 600, size: 12 }
             },
+            grid: { color: '#f1f5f9' }
+          },
+          y: {
+            grid: { color: '#f1f5f9' }
+          }
+        },
+        onClick: (e, elements) => {
+          if (elements.length > 0) {
+            const index = elements[0].index;
+            const newK = index + 1;
+            const kBtns = document.querySelectorAll('#kSelectorGroup .k-btn');
+            kBtns.forEach(b => {
+              if (parseInt(b.dataset.k) === newK) {
+                b.click();
+              }
+            });
+          }
+        }
+      };
+
+      // RMSE 圖表 (左)
+      rmseChartInstance = new Chart(ctxRMSE, {
+        type: 'line',
+        data: { labels: ['1', '2', '3', '4', '5'], datasets: [] },
+        options: {
+          ...commonOptions,
+          scales: {
+            ...commonOptions.scales,
             y: {
+              ...commonOptions.scales.y,
               title: {
                 display: true,
-                text: '預測利潤 (Predicted Profit, USD)',
-                color: '#94a3b8',
-                font: { size: 12, weight: '500' }
+                text: 'RMSE ($) (Lower is Better)',
+                font: { family: 'Inter', weight: 600, size: 12 }
               },
-              grid: { color: 'rgba(51, 65, 85, 0.4)' },
               ticks: {
-                color: '#94a3b8',
-                callback: (val) => '$' + (val / 1000) + 'k'
+                callback: (val) => val.toLocaleString()
+              }
+            }
+          }
+        }
+      });
+
+      // R² 圖表 (右)
+      r2ChartInstance = new Chart(ctxR2, {
+        type: 'line',
+        data: { labels: ['1', '2', '3', '4', '5'], datasets: [] },
+        options: {
+          ...commonOptions,
+          scales: {
+            ...commonOptions.scales,
+            y: {
+              ...commonOptions.scales.y,
+              title: {
+                display: true,
+                text: 'R-squared (Higher is Better)',
+                font: { family: 'Inter', weight: 600, size: 12 }
               }
             }
           }
@@ -811,42 +1497,64 @@
       });
     }
 
-    // ============================================================
-    // 5. 即時預測器 (Live Predictor) 滑桿即時聯動
-    // ============================================================
-    const rdSlider = document.getElementById('rdSlider');
-    const admSlider = document.getElementById('admSlider');
-    const mktSlider = document.getElementById('mktSlider');
+    // 更新折線圖數據與樣式
+    function updateCharts() {
+      const isCompareAll = currentAlgo === 'ALL';
+      document.getElementById('rmseChartBadge').textContent = isCompareAll ? '比較全部 5 種方法' : (ALGO_NAMES_ZH[currentAlgo] || currentAlgo);
+      document.getElementById('r2ChartBadge').textContent = '頂點於 k=2';
+      
+      let datasetsRMSE = [];
+      let datasetsR2 = [];
 
-    const rdValText = document.getElementById('rdValText');
-    const admValText = document.getElementById('admValText');
-    const mktValText = document.getElementById('mktValText');
-    const predictedProfit = document.getElementById('predictedProfit');
+      const algosToRender = isCompareAll 
+        ? ['Lasso', 'Forward SFS', 'RFE', 'ElasticNet', 'Exhaustive']
+        : [currentAlgo];
 
-    function updateLivePrediction() {
-      const rd = parseFloat(rdSlider.value);
-      const adm = parseFloat(admSlider.value);
-      const mkt = parseFloat(mktSlider.value);
+      algosToRender.forEach((algo) => {
+        const algoData = window.MODEL_DATA[algo];
+        const rmsePoints = algoData.map(item => item.rmse);
+        const r2Points = algoData.map(item => item.r2);
+        const color = ALGO_COLORS[algo] || '#4f46e5';
 
-      rdValText.textContent = formatCurrency(rd);
-      admValText.textContent = formatCurrency(adm);
-      mktValText.textContent = formatCurrency(mkt);
+        // 點狀標記：k=2 綠色高亮 (截圖中綠色大圓點)
+        const pointRadii = algoData.map(item => item.k === currentK ? 7 : (item.k === 2 ? 6 : 4));
+        const pointColors = algoData.map(item => item.k === 2 ? '#10b981' : color);
 
-      const [w1, w2, w3] = currentModel.weights;
-      const b0 = currentModel.intercept;
+        datasetsRMSE.push({
+          label: ALGO_NAMES_ZH[algo] || algo,
+          data: rmsePoints,
+          borderColor: color,
+          backgroundColor: color,
+          borderWidth: isCompareAll ? 2 : 2.5,
+          tension: 0.1,
+          pointRadius: pointRadii,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2
+        });
 
-      const pred = b0 + (w1 * rd) + (w2 * adm) + (w3 * mkt);
-      predictedProfit.textContent = formatCurrency(pred);
+        datasetsR2.push({
+          label: ALGO_NAMES_ZH[algo] || algo,
+          data: r2Points,
+          borderColor: color,
+          backgroundColor: color,
+          borderWidth: isCompareAll ? 2 : 2.5,
+          tension: 0.1,
+          pointRadius: pointRadii,
+          pointBackgroundColor: pointColors,
+          pointBorderColor: '#ffffff',
+          pointBorderWidth: 2
+        });
+      });
+
+      rmseChartInstance.data.datasets = datasetsRMSE;
+      rmseChartInstance.options.plugins.legend.display = isCompareAll;
+      rmseChartInstance.update();
+
+      r2ChartInstance.data.datasets = datasetsR2;
+      r2ChartInstance.options.plugins.legend.display = isCompareAll;
+      r2ChartInstance.update();
     }
-
-    [rdSlider, admSlider, mktSlider].forEach(slider => {
-      slider.addEventListener('input', updateLivePrediction);
-    });
-
-    // 頁面初次載入：自動抓取並訓練
-    window.addEventListener('DOMContentLoaded', () => {
-      fetchAndTrain(csvUrlInput.value);
-    });
   </script>
 </body>
 </html>
