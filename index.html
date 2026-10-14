@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>50 Startups 多元線性迴歸分析平台</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              50: '#eef2ff',
+              500: '#6366f1',
+              600: '#4f46e5',
+              700: '#4338ca',
+            }
+          }
+        }
+      }
+    }
+  </script>
+  <!-- PapaParse CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <!-- math.js CDN -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.0/math.min.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    /* 自訂平滑滑桿樣式 */
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      height: 20px;
+      width: 20px;
+      border-radius: 9999px;
+      background: #6366f1;
+      cursor: pointer;
+      box-shadow: 0 0 10px rgba(99, 102, 241, 0.6);
+      transition: all 0.15s ease-in-out;
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.15);
+      background: #818cf8;
+    }
+    .glass-card {
+      background: rgba(30, 41, 59, 0.7);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex flex-col font-sans selection:bg-indigo-500 selection:text-white">
+
+  <!-- 頂部導航列 -->
+  <header class="border-b border-slate-800 bg-slate-900/80 backdrop-blur sticky top-0 z-50">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between gap-4">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-indigo-500 to-violet-500 flex items-center justify-center shadow-lg shadow-indigo-500/25">
+          <i data-lucide="trending-up" class="w-5 h-5 text-white"></i>
+        </div>
+        <div>
+          <h1 class="text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2">
+            ML Analytics Studio
+            <span class="text-xs px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-300 border border-indigo-500/30 font-medium">CRISP-DM</span>
+          </h1>
+          <p class="text-xs text-slate-400 hidden sm:block">純前端多元線性迴歸計算引擎 (Normal Equation)</p>
+        </div>
+      </div>
+
+      <!-- 加分條件 1: 主題/問題切換下拉式選單 -->
+      <div class="flex items-center gap-2">
+        <label for="problemSelect" class="text-xs text-slate-400 hidden md:inline-block font-medium">選擇任務：</label>
+        <div class="relative">
+          <select id="problemSelect" class="appearance-none bg-slate-800 border border-slate-700 text-slate-200 text-sm rounded-lg pl-3 pr-9 py-2 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 cursor-pointer transition font-medium hover:bg-slate-750">
+            <option value="problem1" selected>Problem 1: 50 Startups 多元線性迴歸</option>
+            <option value="problem2">Problem 2: 直接套用 Skill or Workflow</option>
+          </select>
+          <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-2 text-slate-400">
+            <i data-lucide="chevron-down" class="w-4 h-4"></i>
+          </div>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <!-- 主要內容區 -->
+  <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 w-full space-y-6">
+
+    <!-- 加分條件 2: 自訂資料集輸入區域 (頂部) -->
+    <section class="glass-card rounded-2xl p-4 sm:p-5 shadow-xl relative overflow-hidden">
+      <div class="absolute -top-12 -right-12 w-48 h-48 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+      
+      <div class="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-4">
+        <div class="space-y-1">
+          <div class="flex items-center gap-2 text-sm font-semibold text-slate-200">
+            <i data-lucide="database" class="w-4 h-4 text-indigo-400"></i>
+            動態資料集設定 (CSV URL)
+          </div>
+          <p class="text-xs text-slate-400">支援即時抓取遠端或本地 CSV 檔案，使用 PapaParse 進行流式解析與訓練。</p>
+        </div>
+
+        <div class="flex-1 max-w-2xl flex flex-col sm:flex-row gap-2">
+          <div class="relative flex-1">
+            <input 
+              type="text" 
+              id="csvUrlInput" 
+              value="https://raw.githubusercontent.com/Avik-Jain/100-Days-Of-ML-Code/master/datasets/50_Startups.csv" 
+              placeholder="請輸入 CSV 檔案網址..."
+              class="w-full bg-slate-900 border border-slate-700 rounded-xl px-3.5 py-2.5 text-xs sm:text-sm text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono truncate"
+            />
+          </div>
+          <div class="flex items-center gap-2">
+            <button 
+              id="loadDataBtn" 
+              class="px-4 py-2.5 bg-indigo-600 hover:bg-indigo-500 active:bg-indigo-700 text-white font-medium text-xs sm:text-sm rounded-xl transition duration-150 flex items-center justify-center gap-2 shadow-lg shadow-indigo-600/30 whitespace-nowrap">
+              <i data-lucide="refresh-cw" class="w-4 h-4" id="btnIcon"></i>
+              <span id="btnText">載入資料</span>
+            </button>
+            <button 
+              id="useLocalBtn"
+              title="載入本地 50_Startups.csv"
+              class="px-3 py-2.5 bg-slate-800 hover:bg-slate-750 border border-slate-700 text-slate-300 text-xs sm:text-sm rounded-xl transition whitespace-nowrap">
+              本地 CSV
+            </button>
+          </div>
+        </div>
+      </div>
+      <div id="dataStatus" class="mt-2 text-xs flex items-center gap-2 text-emerald-400 hidden">
+        <i data-lucide="check-circle" class="w-3.5 h-3.5"></i>
+        <span>資料載入成功！已完成模型訓練與矩陣求逆計算。</span>
+      </div>
+    </section>
+
+    <!-- SECTION: Problem 1 迴歸分析儀表板 -->
+    <div id="problem1Content" class="space-y-6">
+
+      <!-- 統計指標卡片 -->
+      <section class="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- 樣本數量 -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-slate-400">有效樣本數 (N)</span>
+            <div class="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-400 flex items-center justify-center">
+              <i data-lucide="layers" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-2xl sm:text-3xl font-extrabold text-white" id="metricCount">--</div>
+          <p class="text-[11px] text-slate-500 mt-1">資料行完整記錄</p>
+        </div>
+
+        <!-- R-Squared -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-slate-400">決定係數 (R²)</span>
+            <div class="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-400 flex items-center justify-center">
+              <i data-lucide="target" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-2xl sm:text-3xl font-extrabold text-indigo-400" id="metricR2">--</div>
+          <p class="text-[11px] text-slate-500 mt-1">擬合度衡量標準 (0~1)</p>
+        </div>
+
+        <!-- MAE -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-slate-400">平均絕對誤差 (MAE)</span>
+            <div class="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
+              <i data-lucide="activity" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-2xl sm:text-3xl font-extrabold text-emerald-400" id="metricMAE">--</div>
+          <p class="text-[11px] text-slate-500 mt-1">平均利潤預測偏誤</p>
+        </div>
+
+        <!-- RMSE -->
+        <div class="glass-card rounded-2xl p-4 sm:p-5 relative overflow-hidden group hover:border-slate-700 transition">
+          <div class="flex items-center justify-between mb-2">
+            <span class="text-xs font-medium text-slate-400">均方根誤差 (RMSE)</span>
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-400 flex items-center justify-center">
+              <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+            </div>
+          </div>
+          <div class="text-2xl sm:text-3xl font-extrabold text-amber-400" id="metricRMSE">--</div>
+          <p class="text-[11px] text-slate-500 mt-1">對異常值較敏感之誤差</p>
+        </div>
+      </section>
+
+      <!-- 數學常態方程式與模型權重公式 -->
+      <section class="glass-card rounded-2xl p-4 sm:p-5 border border-indigo-500/20">
+        <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="px-2 py-0.5 rounded bg-indigo-500/20 text-indigo-400 text-xs font-mono font-bold">Normal Equation</span>
+              <h2 class="text-sm font-semibold text-white">常態方程式解析解求解公式： θ = (XᵀX)⁻¹Xᵀy</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-1">
+              純前端使用 <span class="text-indigo-300 font-mono">math.js</span> 直接求解矩陣逆矩陣，無須迭代梯度下降即可精準獲得全局最佳解。
+            </p>
+          </div>
+          <div id="equationDisplay" class="bg-slate-900/90 rounded-xl px-4 py-2.5 font-mono text-xs sm:text-sm text-indigo-300 border border-slate-800 break-all">
+            計算中...
+          </div>
+        </div>
+      </section>
+
+      <!-- 主要主體：圖表與即時預測器 -->
+      <section class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+
+        <!-- 左側：Chart.js 散佈圖 (8 cols) -->
+        <div class="lg:col-span-7 glass-card rounded-2xl p-5 flex flex-col justify-between">
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div>
+                <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                  <i data-lucide="scatter-chart" class="w-5 h-5 text-indigo-400"></i>
+                  實際利潤 vs 模型預測利潤
+                </h3>
+                <p class="text-xs text-slate-400 mt-0.5">點越接近對角虛線（Ideal Line），表示模型預測越精確</p>
+              </div>
+              <span class="text-xs px-2.5 py-1 rounded-md bg-slate-800 text-slate-300 border border-slate-700">Chart.js</span>
+            </div>
+            <div class="relative w-full h-80 sm:h-96">
+              <canvas id="scatterChart"></canvas>
+            </div>
+          </div>
+          <div class="mt-4 pt-3 border-t border-slate-800/80 flex flex-wrap items-center justify-between text-xs text-slate-400 gap-2">
+            <span>● 點狀標記：實際觀察值與預測配對</span>
+            <span>- - 虛線：y = x 完美擬合參考線</span>
+          </div>
+        </div>
+
+        <!-- 右側：即時預測器 Live Predictor (5 cols) -->
+        <div class="lg:col-span-5 glass-card rounded-2xl p-5 flex flex-col justify-between space-y-5">
+          <div>
+            <div class="flex items-center justify-between mb-3">
+              <h3 class="text-base font-semibold text-white flex items-center gap-2">
+                <i data-lucide="sliders" class="w-5 h-5 text-indigo-400"></i>
+                即時預測器 (Live Predictor)
+              </h3>
+              <span class="px-2 py-0.5 text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-full font-medium">即時響應</span>
+            </div>
+            <p class="text-xs text-slate-400 mb-5">拖動下方滑桿即可即時利用迴歸模型推論估算企業預期利潤。</p>
+
+            <!-- 滑桿控制項群組 -->
+            <div class="space-y-5">
+              <!-- Slider 1: R&D Spend -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                    研發支出 (R&D Spend)
+                  </span>
+                  <span id="rdValText" class="font-mono text-indigo-300 font-bold">$100,000</span>
+                </div>
+                <input 
+                  type="range" 
+                  id="rdSlider" 
+                  min="0" 
+                  max="200000" 
+                  step="1000" 
+                  value="100000" 
+                  class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none"
+                />
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>$0</span>
+                  <span>$100,000</span>
+                  <span>$200,000</span>
+                </div>
+              </div>
+
+              <!-- Slider 2: Administration -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-violet-500"></span>
+                    行政管理支出 (Administration)
+                  </span>
+                  <span id="admValText" class="font-mono text-violet-300 font-bold">$120,000</span>
+                </div>
+                <input 
+                  type="range" 
+                  id="admSlider" 
+                  min="0" 
+                  max="200000" 
+                  step="1000" 
+                  value="120000" 
+                  class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none"
+                />
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>$0</span>
+                  <span>$100,000</span>
+                  <span>$200,000</span>
+                </div>
+              </div>
+
+              <!-- Slider 3: Marketing Spend -->
+              <div class="space-y-1.5">
+                <div class="flex justify-between text-xs">
+                  <span class="text-slate-300 font-medium flex items-center gap-1.5">
+                    <span class="w-2 h-2 rounded-full bg-cyan-500"></span>
+                    行銷推廣支出 (Marketing Spend)
+                  </span>
+                  <span id="mktValText" class="font-mono text-cyan-300 font-bold">$150,000</span>
+                </div>
+                <input 
+                  type="range" 
+                  id="mktSlider" 
+                  min="0" 
+                  max="500000" 
+                  step="2000" 
+                  value="150000" 
+                  class="w-full h-2 bg-slate-800 rounded-lg appearance-none cursor-pointer focus:outline-none"
+                />
+                <div class="flex justify-between text-[10px] text-slate-500 font-mono">
+                  <span>$0</span>
+                  <span>$250,000</span>
+                  <span>$500,000</span>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- 預測結果展示卡 -->
+          <div class="bg-gradient-to-br from-indigo-950/80 to-slate-900 border border-indigo-500/30 rounded-2xl p-5 text-center shadow-lg relative overflow-hidden">
+            <div class="absolute -right-6 -bottom-6 w-24 h-24 bg-indigo-500/20 rounded-full blur-xl"></div>
+            <span class="text-xs uppercase tracking-wider text-slate-400 font-medium">預測年度利潤 (Estimated Profit)</span>
+            <div id="predictedProfit" class="text-3xl sm:text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-indigo-300 via-indigo-100 to-cyan-300 my-2 font-mono">
+              $0.00
+            </div>
+            <div class="text-[11px] text-slate-400 flex items-center justify-center gap-1.5">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-400"></i>
+              <span>基於目前數值即時計算中</span>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- 特徵係數表 -->
+      <section class="glass-card rounded-2xl p-5 overflow-hidden">
+        <h3 class="text-sm font-semibold text-white mb-3 flex items-center gap-2">
+          <i data-lucide="table" class="w-4 h-4 text-indigo-400"></i>
+          模型特徵係數權重清單 (Model Weights)
+        </h3>
+        <div class="overflow-x-auto">
+          <table class="w-full text-left text-xs sm:text-sm">
+            <thead class="bg-slate-900/80 text-slate-400 border-b border-slate-800">
+              <tr>
+                <th class="py-3 px-4 font-semibold">特徵名稱 (Feature)</th>
+                <th class="py-3 px-4 font-semibold">數學符號</th>
+                <th class="py-3 px-4 font-semibold">權重係數 (Coefficient)</th>
+                <th class="py-3 px-4 font-semibold">商業意義解讀</th>
+              </tr>
+            </thead>
+            <tbody id="coefficientsTable" class="divide-y divide-slate-800/60 text-slate-200 font-mono">
+              <!-- JS 動態插入 -->
+            </tbody>
+          </table>
+        </div>
+      </section>
+    </div>
+
+    <!-- SECTION: Problem 2 現代感佔位區塊 (預設隱藏) -->
+    <div id="problem2Content" class="hidden">
+      <div class="glass-card rounded-3xl p-8 sm:p-16 border border-indigo-500/30 text-center relative overflow-hidden shadow-2xl">
+        <!-- 裝飾光暈 -->
+        <div class="absolute -top-24 left-1/2 -translate-x-1/2 w-96 h-96 bg-gradient-to-b from-indigo-500/20 to-purple-500/0 rounded-full blur-3xl pointer-events-none"></div>
+
+        <div class="max-w-xl mx-auto space-y-6 relative z-10">
+          <!-- 脈動動態圖示 -->
+          <div class="relative w-24 h-24 mx-auto">
+            <div class="absolute inset-0 rounded-3xl bg-indigo-500/20 animate-ping opacity-50"></div>
+            <div class="relative w-24 h-24 rounded-3xl bg-gradient-to-tr from-indigo-600 via-indigo-500 to-violet-600 flex items-center justify-center shadow-xl shadow-indigo-500/30">
+              <i data-lucide="cpu" class="w-12 h-12 text-white"></i>
+            </div>
+          </div>
+
+          <div class="space-y-2">
+            <div class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 border border-indigo-500/30 text-indigo-300 text-xs font-semibold">
+              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+              Auto-Workflow Integration Active
+            </div>
+            <h2 class="text-2xl sm:text-3xl font-extrabold text-white tracking-tight">
+              Problem 2: 直接套用 Skill or Workflow
+            </h2>
+            <p class="text-sm sm:text-base text-slate-300 leading-relaxed">
+              已套用 Workflow / Skill，準備連接至其他模型 API
+            </p>
+          </div>
+
+          <!-- 模擬串接端點狀態 -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-4 text-left">
+            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div class="text-[11px] text-slate-400">Agentic Skill</div>
+              <div class="text-xs font-bold text-slate-200 mt-1 flex items-center gap-1.5">
+                <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-400"></i>
+                50-Startups Pipeline
+              </div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div class="text-[11px] text-slate-400">Target Endpoint</div>
+              <div class="text-xs font-bold text-slate-200 mt-1 flex items-center gap-1.5">
+                <i data-lucide="radio" class="w-3.5 h-3.5 text-indigo-400"></i>
+                REST / gRPC Stream
+              </div>
+            </div>
+            <div class="p-3.5 rounded-xl bg-slate-900/80 border border-slate-800">
+              <div class="text-[11px] text-slate-400">Execution Mode</div>
+              <div class="text-xs font-bold text-slate-200 mt-1 flex items-center gap-1.5">
+                <i data-lucide="zap" class="w-3.5 h-3.5 text-amber-400"></i>
+                Zero-Latency Client
+              </div>
+            </div>
+          </div>
+
+          <div class="pt-2">
+            <button onclick="document.getElementById('problemSelect').value='problem1'; document.getElementById('problemSelect').dispatchEvent(new Event('change'));" class="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-xs sm:text-sm text-slate-200 font-medium border border-slate-700 transition">
+              返回 Problem 1 迴歸分析儀表板
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- 頁腳 -->
+  <footer class="border-t border-slate-900 bg-slate-950/80 py-4 text-center text-xs text-slate-500">
+    50 Startups Multiple Linear Regression Analysis Studio • Pure Client-Side Machine Learning with math.js & Chart.js
+  </footer>
+
+  <!-- 核心 JavaScript 邏輯 -->
+  <script>
+    // 初始化 Lucide 圖示
+    lucide.createIcons();
+
+    // 全域變數
+    let currentModel = {
+      weights: [0, 0, 0], // [R&D, Administration, Marketing]
+      intercept: 0,
+      r2: 0,
+      mae: 0,
+      rmse: 0,
+      count: 0
+    };
+    let scatterChartInstance = null;
+
+    // 格式化貨幣函式
+    function formatCurrency(val) {
+      return new Intl.NumberFormat('en-US', {
+        style: 'currency',
+        currency: 'USD',
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2
+      }).format(val);
+    }
+
+    // ============================================================
+    // 1. 版面與任務切換 (加分條件 1)
+    // ============================================================
+    const problemSelect = document.getElementById('problemSelect');
+    const problem1Content = document.getElementById('problem1Content');
+    const problem2Content = document.getElementById('problem2Content');
+
+    problemSelect.addEventListener('change', (e) => {
+      const selected = e.target.value;
+      if (selected === 'problem1') {
+        problem1Content.classList.remove('hidden');
+        problem2Content.classList.add('hidden');
+        // 若有圖表需要 resize
+        if (scatterChartInstance) scatterChartInstance.resize();
+      } else {
+        problem1Content.classList.add('hidden');
+        problem2Content.classList.remove('hidden');
+      }
+    });
+
+    // ============================================================
+    // 2. 自訂資料集載入與解析 (加分條件 2)
+    // ============================================================
+    const csvUrlInput = document.getElementById('csvUrlInput');
+    const loadDataBtn = document.getElementById('loadDataBtn');
+    const useLocalBtn = document.getElementById('useLocalBtn');
+    const btnText = document.getElementById('btnText');
+    const dataStatus = document.getElementById('dataStatus');
+
+    loadDataBtn.addEventListener('click', () => {
+      const url = csvUrlInput.value.trim();
+      if (!url) {
+        alert('請輸入有效的 CSV 檔案網址');
+        return;
+      }
+      fetchAndTrain(url);
+    });
+
+    useLocalBtn.addEventListener('click', () => {
+      csvUrlInput.value = './50_Startups.csv';
+      fetchAndTrain('./50_Startups.csv');
+    });
+
+    function setBtnLoading(isLoading) {
+      if (isLoading) {
+        loadDataBtn.disabled = true;
+        btnText.textContent = '載入中...';
+        loadDataBtn.classList.add('opacity-75');
+      } else {
+        loadDataBtn.disabled = false;
+        btnText.textContent = '載入資料';
+        loadDataBtn.classList.remove('opacity-75');
+      }
+    }
+
+    function fetchAndTrain(csvSource) {
+      setBtnLoading(true);
+
+      Papa.parse(csvSource, {
+        download: true,
+        header: true,
+        dynamicTyping: true,
+        skipEmptyLines: true,
+        complete: function(results) {
+          setBtnLoading(false);
+          const data = results.data;
+          if (!data || data.length === 0) {
+            alert('無法獲取有效資料，請檢查 CSV 網址是否支援 CORS 或檔案路徑正確');
+            return;
+          }
+
+          trainNormalEquationModel(data);
+          dataStatus.classList.remove('hidden');
+          setTimeout(() => {
+            dataStatus.classList.add('hidden');
+          }, 4500);
+        },
+        error: function(err) {
+          setBtnLoading(false);
+          console.error("PapaParse error:", err);
+          // 若遠端失敗，嘗試載入本地檔案做備援
+          if (csvSource !== './50_Startups.csv') {
+            alert(`遠端資料載入失敗（可能受限於 CORS），自動切換至本機備份 50_Startups.csv`);
+            csvUrlInput.value = './50_Startups.csv';
+            fetchAndTrain('./50_Startups.csv');
+          } else {
+            alert('讀取 CSV 資料失敗：' + err.message);
+          }
+        }
+      });
+    }
+
+    // ============================================================
+    // 3. 純前端機器學習：使用 math.js 常態方程式 (Normal Equation)
+    //    θ = (Xᵀ X)⁻¹ Xᵀ y
+    // ============================================================
+    function trainNormalEquationModel(rows) {
+      // 提取特徵：R&D Spend, Administration, Marketing Spend，目標：Profit
+      // 過濾缺少必要數值的列
+      const cleaned = rows.filter(r => {
+        const rd = Number(r['R&D Spend']);
+        const adm = Number(r['Administration']);
+        const mkt = Number(r['Marketing Spend']);
+        const profit = Number(r['Profit']);
+        return !isNaN(rd) && !isNaN(adm) && !isNaN(mkt) && !isNaN(profit);
+      });
+
+      if (cleaned.length < 4) {
+        alert('有效資料樣本不足以訓練多元線性迴歸');
+        return;
+      }
+
+      const N = cleaned.length;
+      
+      // 構建設計矩陣 X (包含常數項 1 作為 Intercept)
+      // X: [ [1, rd, adm, mkt], ... ] (N x 4)
+      const X_data = [];
+      const y_data = [];
+
+      for (let i = 0; i < N; i++) {
+        const r = cleaned[i];
+        const rd = Number(r['R&D Spend']);
+        const adm = Number(r['Administration']);
+        const mkt = Number(r['Marketing Spend']);
+        const profit = Number(r['Profit']);
+
+        X_data.push([1.0, rd, adm, mkt]);
+        y_data.push([profit]);
+      }
+
+      // 轉換成 math.js 矩陣
+      const X = math.matrix(X_data);
+      const y = math.matrix(y_data);
+
+      // 常態方程式：theta = inv(X' * X) * X' * y
+      try {
+        const Xt = math.transpose(X);
+        const XtX = math.multiply(Xt, X);
+        const XtX_inv = math.inv(XtX);
+        const XtY = math.multiply(Xt, y);
+        const theta = math.multiply(XtX_inv, XtY);
+
+        // 提取權重
+        const thetaArray = theta.toArray().map(val => val[0]);
+        const intercept = thetaArray[0];
+        const w_rd = thetaArray[1];
+        const w_adm = thetaArray[2];
+        const w_mkt = thetaArray[3];
+
+        currentModel.intercept = intercept;
+        currentModel.weights = [w_rd, w_adm, w_mkt];
+        currentModel.count = N;
+
+        // 計算預測值、殘差與評估指標 (R2, MAE, RMSE)
+        const y_actuals = [];
+        const y_predictions = [];
+        let sumAbsoluteError = 0;
+        let sumSquaredError = 0;
+        let sumActual = 0;
+
+        for (let i = 0; i < N; i++) {
+          const rd = X_data[i][1];
+          const adm = X_data[i][2];
+          const mkt = X_data[i][3];
+          const actual = y_data[i][0];
+
+          const pred = intercept + (w_rd * rd) + (w_adm * adm) + (w_mkt * mkt);
+          y_actuals.push(actual);
+          y_predictions.push(pred);
+
+          const err = actual - pred;
+          sumAbsoluteError += Math.abs(err);
+          sumSquaredError += (err * err);
+          sumActual += actual;
+        }
+
+        const y_mean = sumActual / N;
+        let totalSumSquares = 0;
+        for (let i = 0; i < N; i++) {
+          const diff = y_actuals[i] - y_mean;
+          totalSumSquares += (diff * diff);
+        }
+
+        const r2 = 1 - (sumSquaredError / totalSumSquares);
+        const mae = sumAbsoluteError / N;
+        const rmse = Math.sqrt(sumSquaredError / N);
+
+        currentModel.r2 = r2;
+        currentModel.mae = mae;
+        currentModel.rmse = rmse;
+
+        // 更新 UI
+        updateMetricCards(N, r2, mae, rmse);
+        updateEquationDisplay(intercept, w_rd, w_adm, w_mkt);
+        updateCoefficientsTable(intercept, w_rd, w_adm, w_mkt);
+        renderScatterChart(y_actuals, y_predictions);
+        updateLivePrediction();
+
+      } catch (err) {
+        console.error("矩陣求逆計算失敗:", err);
+        alert("常態方程式計算發生奇異矩陣或不可逆錯誤：" + err.message);
+      }
+    }
+
+    // 更新指標卡片
+    function updateMetricCards(count, r2, mae, rmse) {
+      document.getElementById('metricCount').textContent = count;
+      document.getElementById('metricR2').textContent = r2.toFixed(4);
+      document.getElementById('metricMAE').textContent = formatCurrency(mae);
+      document.getElementById('metricRMSE').textContent = formatCurrency(rmse);
+    }
+
+    // 更新常態方程式字串
+    function updateEquationDisplay(intercept, w1, w2, w3) {
+      const signW2 = w2 >= 0 ? `+ ${w2.toFixed(4)}` : `- ${Math.abs(w2).toFixed(4)}`;
+      const signW3 = w3 >= 0 ? `+ ${w3.toFixed(4)}` : `- ${Math.abs(w3).toFixed(4)}`;
+      const eqStr = `Profit = ${intercept.toFixed(2)} + ${w1.toFixed(4)} × (R&D) ${signW2} × (Admin) ${signW3} × (Marketing)`;
+      document.getElementById('equationDisplay').textContent = eqStr;
+    }
+
+    // 更新特徵係數表
+    function updateCoefficientsTable(b0, b1, b2, b3) {
+      const tbody = document.getElementById('coefficientsTable');
+      const data = [
+        { name: "截距 (Intercept / Bias)", symbol: "θ₀ (b)", coef: b0.toFixed(2), desc: "基礎利潤基準值" },
+        { name: "研發支出 (R&D Spend)", symbol: "θ₁", coef: b1.toFixed(4), desc: `每投入 $1 研發，預計增加利潤 $${b1.toFixed(2)}` },
+        { name: "行政管理 (Administration)", symbol: "θ₂", coef: b2.toFixed(4), desc: `行政管理費用對利潤的邊際影響` },
+        { name: "行銷推廣 (Marketing Spend)", symbol: "θ₃", coef: b3.toFixed(4), desc: `每投入 $1 行銷，預計增加利潤 $${b3.toFixed(2)}` },
+      ];
+
+      tbody.innerHTML = data.map(item => `
+        <tr class="hover:bg-slate-800/40 transition">
+          <td class="py-2.5 px-4 font-sans text-slate-200">${item.name}</td>
+          <td class="py-2.5 px-4 text-indigo-400 font-bold">${item.symbol}</td>
+          <td class="py-2.5 px-4 ${parseFloat(item.coef) >= 0 ? 'text-emerald-400' : 'text-rose-400'}">${item.coef}</td>
+          <td class="py-2.5 px-4 font-sans text-slate-400 text-xs">${item.desc}</td>
+        </tr>
+      `).join('');
+    }
+
+    // ============================================================
+    // 4. 繪製 Chart.js 實際 vs 預測散佈圖
+    // ============================================================
+    function renderScatterChart(actuals, preds) {
+      const ctx = document.getElementById('scatterChart').getContext('2d');
+      
+      const scatterPoints = actuals.map((act, i) => ({
+        x: act,
+        y: preds[i]
+      }));
+
+      const allVals = [...actuals, ...preds];
+      const minVal = Math.floor(Math.min(...allVals) * 0.9);
+      const maxVal = Math.ceil(Math.max(...allVals) * 1.05);
+
+      // 理想對角線資料
+      const idealLine = [
+        { x: minVal, y: minVal },
+        { x: maxVal, y: maxVal }
+      ];
+
+      if (scatterChartInstance) {
+        scatterChartInstance.destroy();
+      }
+
+      scatterChartInstance = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: '樣本觀測點 (Actual vs Predicted)',
+              data: scatterPoints,
+              backgroundColor: 'rgba(99, 102, 241, 0.75)',
+              borderColor: '#818cf8',
+              borderWidth: 1.5,
+              pointRadius: 6,
+              pointHoverRadius: 9,
+              pointHoverBackgroundColor: '#a5b4fc',
+            },
+            {
+              label: '理想擬合線 (y = x)',
+              data: idealLine,
+              type: 'line',
+              borderColor: 'rgba(239, 68, 68, 0.65)',
+              borderWidth: 2,
+              borderDash: [6, 6],
+              pointRadius: 0,
+              fill: false,
+              tension: 0
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              labels: {
+                color: '#cbd5e1',
+                font: { size: 12, family: 'sans-serif' }
+              }
+            },
+            tooltip: {
+              backgroundColor: '#0f172a',
+              borderColor: '#334155',
+              borderWidth: 1,
+              titleColor: '#f8fafc',
+              bodyColor: '#cbd5e1',
+              callbacks: {
+                label: function(context) {
+                  if (context.datasetIndex === 1) return '理想對角線 (y = x)';
+                  return [
+                    `實際利潤: $${context.parsed.x.toLocaleString()}`,
+                    `預測利潤: $${context.parsed.y.toLocaleString()}`,
+                    `殘差: $${(context.parsed.x - context.parsed.y).toLocaleString()}`
+                  ];
+                }
+              }
+            }
+          },
+          scales: {
+            x: {
+              title: {
+                display: true,
+                text: '實際利潤 (Actual Profit, USD)',
+                color: '#94a3b8',
+                font: { size: 12, weight: '500' }
+              },
+              grid: { color: 'rgba(51, 65, 85, 0.4)' },
+              ticks: {
+                color: '#94a3b8',
+                callback: (val) => '$' + (val / 1000) + 'k'
+              }
+            },
+            y: {
+              title: {
+                display: true,
+                text: '預測利潤 (Predicted Profit, USD)',
+                color: '#94a3b8',
+                font: { size: 12, weight: '500' }
+              },
+              grid: { color: 'rgba(51, 65, 85, 0.4)' },
+              ticks: {
+                color: '#94a3b8',
+                callback: (val) => '$' + (val / 1000) + 'k'
+              }
+            }
+          }
+        }
+      });
+    }
+
+    // ============================================================
+    // 5. 即時預測器 (Live Predictor) 滑桿即時聯動
+    // ============================================================
+    const rdSlider = document.getElementById('rdSlider');
+    const admSlider = document.getElementById('admSlider');
+    const mktSlider = document.getElementById('mktSlider');
+
+    const rdValText = document.getElementById('rdValText');
+    const admValText = document.getElementById('admValText');
+    const mktValText = document.getElementById('mktValText');
+    const predictedProfit = document.getElementById('predictedProfit');
+
+    function updateLivePrediction() {
+      const rd = parseFloat(rdSlider.value);
+      const adm = parseFloat(admSlider.value);
+      const mkt = parseFloat(mktSlider.value);
+
+      rdValText.textContent = formatCurrency(rd);
+      admValText.textContent = formatCurrency(adm);
+      mktValText.textContent = formatCurrency(mkt);
+
+      const [w1, w2, w3] = currentModel.weights;
+      const b0 = currentModel.intercept;
+
+      const pred = b0 + (w1 * rd) + (w2 * adm) + (w3 * mkt);
+      predictedProfit.textContent = formatCurrency(pred);
+    }
+
+    [rdSlider, admSlider, mktSlider].forEach(slider => {
+      slider.addEventListener('input', updateLivePrediction);
+    });
+
+    // 頁面初次載入：自動抓取並訓練
+    window.addEventListener('DOMContentLoaded', () => {
+      fetchAndTrain(csvUrlInput.value);
+    });
+  </script>
+</body>
+</html>
